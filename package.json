@@ -1,0 +1,36 @@
+{
+  "name": "homey-data-watchdog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Evidence-based local integration monitoring for Homey SHS and Pro",
+  "main": "app.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc && node scripts/copy-assets.mjs",
+    "test": "tsc -p tsconfig.test.json && node --import tsx --test test/*.test.ts",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate": "homey app validate --level debug",
+    "check": "npm run lint && npm test && npm run build && npm run format:check && npm run validate",
+    "manifest": "node scripts/generate-manifest.mjs"
+  },
+  "dependencies": {
+    "homey-api": "3.20.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/homey": "npm:homey-apps-sdk-v3-types@latest",
+    "@types/node": "^22.0.0",
+    "eslint": "^10.10.0",
+    "globals": "^16.0.0",
+    "homey": "4.5.0",
+    "prettier": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

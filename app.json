@@ -1,0 +1,1069 @@
+{
+  "id": "io.github.arrow87-home.datawatchdog",
+  "version": "0.1.0",
+  "sdk": 3,
+  "compatibility": ">=12.9.0",
+  "runtime": "nodejs",
+  "platforms": ["local"],
+  "name": {
+    "en": "Data Watchdog",
+    "nl": "Data Watchdog"
+  },
+  "description": {
+    "en": "Monitor verified data delivery and group integration incidents",
+    "nl": "Bewaak bevestigde datalevering en bundel integratiestoringen"
+  },
+  "category": ["tools"],
+  "brandColor": "#245B68",
+  "author": {
+    "name": "Arrow87-home"
+  },
+  "permissions": ["homey:manager:api"],
+  "flow": {
+    "triggers": [
+      {
+        "id": "device_stale",
+        "title": {
+          "en": "Device became stale"
+        },
+        "tokens": [
+          {
+            "name": "source_app",
+            "type": "string",
+            "title": {
+              "en": "source app"
+            }
+          },
+          {
+            "name": "source_app_id",
+            "type": "string",
+            "title": {
+              "en": "source app id"
+            }
+          },
+          {
+            "name": "device",
+            "type": "string",
+            "title": {
+              "en": "device"
+            }
+          },
+          {
+            "name": "device_id",
+            "type": "string",
+            "title": {
+              "en": "device id"
+            }
+          },
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "zone"
+            }
+          },
+          {
+            "name": "capability",
+            "type": "string",
+            "title": {
+              "en": "capability"
+            }
+          },
+          {
+            "name": "last_delivery",
+            "type": "string",
+            "title": {
+              "en": "last delivery"
+            }
+          },
+          {
+            "name": "affected_devices",
+            "type": "string",
+            "title": {
+              "en": "affected devices"
+            }
+          },
+          {
+            "name": "stale_since",
+            "type": "string",
+            "title": {
+              "en": "stale since"
+            }
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "title": {
+              "en": "status"
+            }
+          },
+          {
+            "name": "incident_id",
+            "type": "string",
+            "title": {
+              "en": "incident id"
+            }
+          },
+          {
+            "name": "evidence_kind",
+            "type": "string",
+            "title": {
+              "en": "evidence kind"
+            }
+          },
+          {
+            "name": "age_minutes",
+            "type": "number",
+            "title": {
+              "en": "age minutes"
+            }
+          },
+          {
+            "name": "expected_interval",
+            "type": "number",
+            "title": {
+              "en": "expected interval"
+            }
+          },
+          {
+            "name": "stale_timeout",
+            "type": "number",
+            "title": {
+              "en": "stale timeout"
+            }
+          },
+          {
+            "name": "affected_count",
+            "type": "number",
+            "title": {
+              "en": "affected count"
+            }
+          },
+          {
+            "name": "monitored_count",
+            "type": "number",
+            "title": {
+              "en": "monitored count"
+            }
+          },
+          {
+            "name": "recovered_count",
+            "type": "number",
+            "title": {
+              "en": "recovered count"
+            }
+          },
+          {
+            "name": "incident_duration",
+            "type": "number",
+            "title": {
+              "en": "incident duration"
+            }
+          },
+          {
+            "name": "has_delivery",
+            "type": "boolean",
+            "title": {
+              "en": "Known last delivery"
+            }
+          }
+        ]
+      },
+      {
+        "id": "device_recovered",
+        "title": {
+          "en": "Device recovered"
+        },
+        "tokens": [
+          {
+            "name": "source_app",
+            "type": "string",
+            "title": {
+              "en": "source app"
+            }
+          },
+          {
+            "name": "source_app_id",
+            "type": "string",
+            "title": {
+              "en": "source app id"
+            }
+          },
+          {
+            "name": "device",
+            "type": "string",
+            "title": {
+              "en": "device"
+            }
+          },
+          {
+            "name": "device_id",
+            "type": "string",
+            "title": {
+              "en": "device id"
+            }
+          },
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "zone"
+            }
+          },
+          {
+            "name": "capability",
+            "type": "string",
+            "title": {
+              "en": "capability"
+            }
+          },
+          {
+            "name": "last_delivery",
+            "type": "string",
+            "title": {
+              "en": "last delivery"
+            }
+          },
+          {
+            "name": "affected_devices",
+            "type": "string",
+            "title": {
+              "en": "affected devices"
+            }
+          },
+          {
+            "name": "stale_since",
+            "type": "string",
+            "title": {
+              "en": "stale since"
+            }
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "title": {
+              "en": "status"
+            }
+          },
+          {
+            "name": "incident_id",
+            "type": "string",
+            "title": {
+              "en": "incident id"
+            }
+          },
+          {
+            "name": "evidence_kind",
+            "type": "string",
+            "title": {
+              "en": "evidence kind"
+            }
+          },
+          {
+            "name": "age_minutes",
+            "type": "number",
+            "title": {
+              "en": "age minutes"
+            }
+          },
+          {
+            "name": "expected_interval",
+            "type": "number",
+            "title": {
+              "en": "expected interval"
+            }
+          },
+          {
+            "name": "stale_timeout",
+            "type": "number",
+            "title": {
+              "en": "stale timeout"
+            }
+          },
+          {
+            "name": "affected_count",
+            "type": "number",
+            "title": {
+              "en": "affected count"
+            }
+          },
+          {
+            "name": "monitored_count",
+            "type": "number",
+            "title": {
+              "en": "monitored count"
+            }
+          },
+          {
+            "name": "recovered_count",
+            "type": "number",
+            "title": {
+              "en": "recovered count"
+            }
+          },
+          {
+            "name": "incident_duration",
+            "type": "number",
+            "title": {
+              "en": "incident duration"
+            }
+          },
+          {
+            "name": "has_delivery",
+            "type": "boolean",
+            "title": {
+              "en": "Known last delivery"
+            }
+          }
+        ]
+      },
+      {
+        "id": "integration_stale",
+        "title": {
+          "en": "Integration became stale"
+        },
+        "tokens": [
+          {
+            "name": "source_app",
+            "type": "string",
+            "title": {
+              "en": "source app"
+            }
+          },
+          {
+            "name": "source_app_id",
+            "type": "string",
+            "title": {
+              "en": "source app id"
+            }
+          },
+          {
+            "name": "device",
+            "type": "string",
+            "title": {
+              "en": "device"
+            }
+          },
+          {
+            "name": "device_id",
+            "type": "string",
+            "title": {
+              "en": "device id"
+            }
+          },
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "zone"
+            }
+          },
+          {
+            "name": "capability",
+            "type": "string",
+            "title": {
+              "en": "capability"
+            }
+          },
+          {
+            "name": "last_delivery",
+            "type": "string",
+            "title": {
+              "en": "last delivery"
+            }
+          },
+          {
+            "name": "affected_devices",
+            "type": "string",
+            "title": {
+              "en": "affected devices"
+            }
+          },
+          {
+            "name": "stale_since",
+            "type": "string",
+            "title": {
+              "en": "stale since"
+            }
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "title": {
+              "en": "status"
+            }
+          },
+          {
+            "name": "incident_id",
+            "type": "string",
+            "title": {
+              "en": "incident id"
+            }
+          },
+          {
+            "name": "evidence_kind",
+            "type": "string",
+            "title": {
+              "en": "evidence kind"
+            }
+          },
+          {
+            "name": "age_minutes",
+            "type": "number",
+            "title": {
+              "en": "age minutes"
+            }
+          },
+          {
+            "name": "expected_interval",
+            "type": "number",
+            "title": {
+              "en": "expected interval"
+            }
+          },
+          {
+            "name": "stale_timeout",
+            "type": "number",
+            "title": {
+              "en": "stale timeout"
+            }
+          },
+          {
+            "name": "affected_count",
+            "type": "number",
+            "title": {
+              "en": "affected count"
+            }
+          },
+          {
+            "name": "monitored_count",
+            "type": "number",
+            "title": {
+              "en": "monitored count"
+            }
+          },
+          {
+            "name": "recovered_count",
+            "type": "number",
+            "title": {
+              "en": "recovered count"
+            }
+          },
+          {
+            "name": "incident_duration",
+            "type": "number",
+            "title": {
+              "en": "incident duration"
+            }
+          },
+          {
+            "name": "has_delivery",
+            "type": "boolean",
+            "title": {
+              "en": "Known last delivery"
+            }
+          }
+        ]
+      },
+      {
+        "id": "integration_recovered",
+        "title": {
+          "en": "Integration recovered"
+        },
+        "tokens": [
+          {
+            "name": "source_app",
+            "type": "string",
+            "title": {
+              "en": "source app"
+            }
+          },
+          {
+            "name": "source_app_id",
+            "type": "string",
+            "title": {
+              "en": "source app id"
+            }
+          },
+          {
+            "name": "device",
+            "type": "string",
+            "title": {
+              "en": "device"
+            }
+          },
+          {
+            "name": "device_id",
+            "type": "string",
+            "title": {
+              "en": "device id"
+            }
+          },
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "zone"
+            }
+          },
+          {
+            "name": "capability",
+            "type": "string",
+            "title": {
+              "en": "capability"
+            }
+          },
+          {
+            "name": "last_delivery",
+            "type": "string",
+            "title": {
+              "en": "last delivery"
+            }
+          },
+          {
+            "name": "affected_devices",
+            "type": "string",
+            "title": {
+              "en": "affected devices"
+            }
+          },
+          {
+            "name": "stale_since",
+            "type": "string",
+            "title": {
+              "en": "stale since"
+            }
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "title": {
+              "en": "status"
+            }
+          },
+          {
+            "name": "incident_id",
+            "type": "string",
+            "title": {
+              "en": "incident id"
+            }
+          },
+          {
+            "name": "evidence_kind",
+            "type": "string",
+            "title": {
+              "en": "evidence kind"
+            }
+          },
+          {
+            "name": "age_minutes",
+            "type": "number",
+            "title": {
+              "en": "age minutes"
+            }
+          },
+          {
+            "name": "expected_interval",
+            "type": "number",
+            "title": {
+              "en": "expected interval"
+            }
+          },
+          {
+            "name": "stale_timeout",
+            "type": "number",
+            "title": {
+              "en": "stale timeout"
+            }
+          },
+          {
+            "name": "affected_count",
+            "type": "number",
+            "title": {
+              "en": "affected count"
+            }
+          },
+          {
+            "name": "monitored_count",
+            "type": "number",
+            "title": {
+              "en": "monitored count"
+            }
+          },
+          {
+            "name": "recovered_count",
+            "type": "number",
+            "title": {
+              "en": "recovered count"
+            }
+          },
+          {
+            "name": "incident_duration",
+            "type": "number",
+            "title": {
+              "en": "incident duration"
+            }
+          },
+          {
+            "name": "has_delivery",
+            "type": "boolean",
+            "title": {
+              "en": "Known last delivery"
+            }
+          }
+        ]
+      },
+      {
+        "id": "any_incident_started",
+        "title": {
+          "en": "Any watchdog incident started"
+        },
+        "tokens": [
+          {
+            "name": "source_app",
+            "type": "string",
+            "title": {
+              "en": "source app"
+            }
+          },
+          {
+            "name": "source_app_id",
+            "type": "string",
+            "title": {
+              "en": "source app id"
+            }
+          },
+          {
+            "name": "device",
+            "type": "string",
+            "title": {
+              "en": "device"
+            }
+          },
+          {
+            "name": "device_id",
+            "type": "string",
+            "title": {
+              "en": "device id"
+            }
+          },
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "zone"
+            }
+          },
+          {
+            "name": "capability",
+            "type": "string",
+            "title": {
+              "en": "capability"
+            }
+          },
+          {
+            "name": "last_delivery",
+            "type": "string",
+            "title": {
+              "en": "last delivery"
+            }
+          },
+          {
+            "name": "affected_devices",
+            "type": "string",
+            "title": {
+              "en": "affected devices"
+            }
+          },
+          {
+            "name": "stale_since",
+            "type": "string",
+            "title": {
+              "en": "stale since"
+            }
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "title": {
+              "en": "status"
+            }
+          },
+          {
+            "name": "incident_id",
+            "type": "string",
+            "title": {
+              "en": "incident id"
+            }
+          },
+          {
+            "name": "evidence_kind",
+            "type": "string",
+            "title": {
+              "en": "evidence kind"
+            }
+          },
+          {
+            "name": "age_minutes",
+            "type": "number",
+            "title": {
+              "en": "age minutes"
+            }
+          },
+          {
+            "name": "expected_interval",
+            "type": "number",
+            "title": {
+              "en": "expected interval"
+            }
+          },
+          {
+            "name": "stale_timeout",
+            "type": "number",
+            "title": {
+              "en": "stale timeout"
+            }
+          },
+          {
+            "name": "affected_count",
+            "type": "number",
+            "title": {
+              "en": "affected count"
+            }
+          },
+          {
+            "name": "monitored_count",
+            "type": "number",
+            "title": {
+              "en": "monitored count"
+            }
+          },
+          {
+            "name": "recovered_count",
+            "type": "number",
+            "title": {
+              "en": "recovered count"
+            }
+          },
+          {
+            "name": "incident_duration",
+            "type": "number",
+            "title": {
+              "en": "incident duration"
+            }
+          },
+          {
+            "name": "has_delivery",
+            "type": "boolean",
+            "title": {
+              "en": "Known last delivery"
+            }
+          }
+        ]
+      },
+      {
+        "id": "any_incident_recovered",
+        "title": {
+          "en": "Any watchdog incident recovered"
+        },
+        "tokens": [
+          {
+            "name": "source_app",
+            "type": "string",
+            "title": {
+              "en": "source app"
+            }
+          },
+          {
+            "name": "source_app_id",
+            "type": "string",
+            "title": {
+              "en": "source app id"
+            }
+          },
+          {
+            "name": "device",
+            "type": "string",
+            "title": {
+              "en": "device"
+            }
+          },
+          {
+            "name": "device_id",
+            "type": "string",
+            "title": {
+              "en": "device id"
+            }
+          },
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "zone"
+            }
+          },
+          {
+            "name": "capability",
+            "type": "string",
+            "title": {
+              "en": "capability"
+            }
+          },
+          {
+            "name": "last_delivery",
+            "type": "string",
+            "title": {
+              "en": "last delivery"
+            }
+          },
+          {
+            "name": "affected_devices",
+            "type": "string",
+            "title": {
+              "en": "affected devices"
+            }
+          },
+          {
+            "name": "stale_since",
+            "type": "string",
+            "title": {
+              "en": "stale since"
+            }
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "title": {
+              "en": "status"
+            }
+          },
+          {
+            "name": "incident_id",
+            "type": "string",
+            "title": {
+              "en": "incident id"
+            }
+          },
+          {
+            "name": "evidence_kind",
+            "type": "string",
+            "title": {
+              "en": "evidence kind"
+            }
+          },
+          {
+            "name": "age_minutes",
+            "type": "number",
+            "title": {
+              "en": "age minutes"
+            }
+          },
+          {
+            "name": "expected_interval",
+            "type": "number",
+            "title": {
+              "en": "expected interval"
+            }
+          },
+          {
+            "name": "stale_timeout",
+            "type": "number",
+            "title": {
+              "en": "stale timeout"
+            }
+          },
+          {
+            "name": "affected_count",
+            "type": "number",
+            "title": {
+              "en": "affected count"
+            }
+          },
+          {
+            "name": "monitored_count",
+            "type": "number",
+            "title": {
+              "en": "monitored count"
+            }
+          },
+          {
+            "name": "recovered_count",
+            "type": "number",
+            "title": {
+              "en": "recovered count"
+            }
+          },
+          {
+            "name": "incident_duration",
+            "type": "number",
+            "title": {
+              "en": "incident duration"
+            }
+          },
+          {
+            "name": "has_delivery",
+            "type": "boolean",
+            "title": {
+              "en": "Known last delivery"
+            }
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "device_is_healthy",
+        "titleFormatted": {
+          "en": "[[monitor]] is healthy"
+        },
+        "title": {
+          "en": "Device is healthy"
+        },
+        "args": [
+          {
+            "name": "monitor",
+            "type": "autocomplete",
+            "title": {
+              "en": "monitor"
+            }
+          }
+        ]
+      },
+      {
+        "id": "device_is_stale",
+        "titleFormatted": {
+          "en": "[[monitor]] is stale"
+        },
+        "title": {
+          "en": "Device is stale"
+        },
+        "args": [
+          {
+            "name": "monitor",
+            "type": "autocomplete",
+            "title": {
+              "en": "monitor"
+            }
+          }
+        ]
+      },
+      {
+        "id": "integration_is_healthy",
+        "titleFormatted": {
+          "en": "[[source]] is healthy"
+        },
+        "title": {
+          "en": "Integration is healthy"
+        },
+        "args": [
+          {
+            "name": "source",
+            "type": "autocomplete",
+            "title": {
+              "en": "source"
+            }
+          }
+        ]
+      },
+      {
+        "id": "integration_is_stale",
+        "titleFormatted": {
+          "en": "[[source]] is stale"
+        },
+        "title": {
+          "en": "Integration is stale"
+        },
+        "args": [
+          {
+            "name": "source",
+            "type": "autocomplete",
+            "title": {
+              "en": "source"
+            }
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "check_all",
+        "title": {
+          "en": "Check all monitors now"
+        }
+      },
+      {
+        "id": "check_monitor",
+        "titleFormatted": {
+          "en": "Check [[monitor]] now"
+        },
+        "title": {
+          "en": "Check monitor now"
+        },
+        "args": [
+          {
+            "name": "monitor",
+            "type": "autocomplete",
+            "title": {
+              "en": "monitor"
+            }
+          }
+        ]
+      },
+      {
+        "id": "record_heartbeat",
+        "titleFormatted": {
+          "en": "Record delivery for [[monitor]] at [[delivered_at]]"
+        },
+        "title": {
+          "en": "Record a confirmed delivery"
+        },
+        "hint": {
+          "en": "Only call after a successful source delivery. Supply its ISO timestamp, never a blind periodic timer."
+        },
+        "args": [
+          {
+            "name": "monitor",
+            "type": "autocomplete",
+            "title": {
+              "en": "monitor"
+            }
+          },
+          {
+            "name": "delivered_at",
+            "type": "text",
+            "title": {
+              "en": "Delivery timestamp (ISO with timezone)"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "api": {
+    "getInventory": {
+      "method": "GET",
+      "path": "/inventory",
+      "public": false
+    },
+    "getStatus": {
+      "method": "GET",
+      "path": "/status",
+      "public": false
+    },
+    "getConfig": {
+      "method": "GET",
+      "path": "/config",
+      "public": false
+    },
+    "putConfig": {
+      "method": "PUT",
+      "path": "/config",
+      "public": false
+    },
+    "postHeartbeat": {
+      "method": "POST",
+      "path": "/heartbeat/:id",
+      "public": false
+    }
+  }
+}
