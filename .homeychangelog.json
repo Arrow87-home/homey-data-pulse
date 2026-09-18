@@ -1,0 +1,5 @@
+{
+  "0.1.0": {
+    "en": "Initial release: monitor device and integration data freshness, group related incidents, use Homey Flow triggers for alerts and recovery, and safely test your setup with the built-in local test source."
+  }
+}
