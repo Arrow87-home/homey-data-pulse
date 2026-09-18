@@ -58,6 +58,11 @@ const manifest = {
   },
   category: ['tools'],
   brandColor: '#245B68',
+  images: {
+    small: '/assets/images/small.png',
+    large: '/assets/images/large.png',
+    xlarge: '/assets/images/xlarge.png',
+  },
   author: { name: 'Arrow87-home' },
   permissions: ['homey:manager:api'],
   capabilities: {
