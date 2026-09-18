@@ -4,6 +4,8 @@ Lokale watchdog voor aantoonbare datalevering en apparaatactiviteit, met gebunde
 
 Status: v0.1 ontwikkelbasis. De gebruiker heeft de app succesvol in development mode op SHS gestart. Deze uitbreiding is uitsluitend offline gevalideerd; er is tijdens deze wijziging niets op een live Homey geïnstalleerd of gewijzigd. Zie [onderzoek en architectuur](docs/architecture.md), [toestandsmodellen](docs/state-machines.md), [SHS-matrix](docs/shs-compatibility.md) en [opleverrapport](docs/delivery-report.md).
 
+New to Data Watchdog? Start with the [User Guide](docs/user-guide.md). The settings page also includes a built-in **How to use Data Watchdog** section, available without opening GitHub.
+
 ## Wat wordt werkelijk bewaakt?
 
 Een temperatuur die gelijk blijft, is geen bewijs van een defect. De app behandelt `capability.lastChanged` daarom niet als generieke heartbeat. De officiële client kan gelijke waarden met een nieuwe transactietijd doorgeven, maar dat bewijst niet dat alle bron-apps of Homey-versies iedere levering publiceren.

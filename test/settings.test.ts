@@ -449,3 +449,120 @@ test('self-test and observer use readable summaries; unpaired controls are hidde
   assert.equal(paired.get('test-badge').textContent, 'STOPPED');
   assert.deepEqual(paired.actions, ['start', 'stop', 'send']);
 });
+
+test('both minute inputs configure half-minute arrow steps without native step validation changing save semantics', () => {
+  const html = readFileSync('settings/index.html', 'utf8');
+  for (const id of ['expected', 'timeout']) {
+    const input = html.match(
+      new RegExp(`<input\\b[^>]*\\bid="${id}"[^>]*>`),
+    )?.[0];
+    assert.ok(input, `${id} input exists`);
+    assert.match(input, /\btype="number"/);
+    assert.match(input, /\bstep="0\.5"/);
+  }
+  assert.match(html, /<form\b[^>]*id="monitor-form"[^>]*\bnovalidate\b/);
+});
+
+for (const minutes of [0.5, 1.5])
+  test(`${minutes} minute inputs save as exact milliseconds with existing strategy limits`, async () => {
+    const f = await ui({ adding: true });
+    f.choose('manual');
+    f.get('expected').value = String(minutes);
+    f.get('timeout').value = String(minutes);
+    await f.submit();
+    assert.equal(f.puts.length, 1);
+    assert.equal(f.saved().monitors[0].expectedIntervalMs, minutes * 60000);
+    assert.equal(f.saved().monitors[0].staleTimeoutMs, minutes * 60000);
+    const observed = await ui({ adding: true });
+    observed.choose('timestamp-capability');
+    observed.get('expected').value = String(minutes);
+    observed.get('timeout').value = '2';
+    await observed.submit();
+    assert.equal(observed.puts.length, 1);
+    assert.equal(
+      observed.saved().monitors[0].expectedIntervalMs,
+      minutes * 60000,
+    );
+  });
+
+test('built-in Help is collapsed, local, structured and covers everyday use', () => {
+  const html = readFileSync('settings/index.html', 'utf8');
+  const start = html.indexOf('<details id="help"');
+  const end = html.indexOf('<p id="message"', start);
+  assert.ok(start >= 0 && end > start);
+  const help = html.slice(start, end);
+  const plain = help.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+  const opening = help.match(/^<details\b[^>]*>/)![0];
+  assert.doesNotMatch(opening, /\bopen(?:\s|=|>)/);
+  assert.match(help, /<summary>How to use Data Watchdog<\/summary>/);
+  for (const topic of [
+    'basics',
+    'quick-start',
+    'methods',
+    'timing',
+    'statuses',
+    'notifications',
+    'self-test',
+    'advanced',
+    'troubleshooting',
+    'limitations',
+  ])
+    assert.match(help, new RegExp(`id="help-${topic}"`));
+  assert.match(help, /Quick start/);
+  assert.match(help, /<ol>/);
+  for (const method of [
+    'Device activity',
+    'Delivery timestamp',
+    'Explicit heartbeat',
+  ])
+    assert.ok(plain.includes(method));
+  for (const state of [
+    'WARMING_UP',
+    'HEALTHY',
+    'SUSPECTED_STALE',
+    'DEVICE_STALE',
+    'RECOVERING',
+    'DISABLED',
+    'MISSING',
+    'UNKNOWN',
+  ])
+    assert.ok(help.includes(`<dt>${state}</dt>`));
+  for (const term of [
+    'Any watchdog incident started',
+    'Any watchdog incident recovered',
+    'Send a push notification',
+    'Start heartbeat',
+    'Stop',
+    'Send once',
+    'STOPPED',
+  ])
+    assert.ok(plain.includes(term));
+  assert.match(plain, /Technical note is optional/);
+  assert.match(plain, /does not affect detection/);
+  assert.match(plain, /21\.3 °C/);
+  assert.doesNotMatch(help, /https?:\/\/|<iframe|<script/);
+});
+
+test('standalone user guide is linked from README and covers setup, notifications, troubleshooting and limitations', () => {
+  const guide = readFileSync('docs/user-guide.md', 'utf8');
+  for (const heading of [
+    'What Data Watchdog does',
+    'Quick start',
+    'Choosing a freshness method',
+    'Choosing the timing',
+    'Understanding monitor statuses',
+    'Getting notifications',
+    'Editing and disabling monitors',
+    'Using the local self-test',
+    'Troubleshooting',
+    'Good monitoring examples',
+    'Important limitations',
+  ])
+    assert.ok(guide.includes(`## ${heading}`));
+  assert.match(
+    readFileSync('README.md', 'utf8'),
+    /\[User Guide\]\(docs\/user-guide\.md\)/,
+  );
+  assert.match(guide, /Any watchdog incident recovered/);
+  assert.match(guide, /cannot report a complete outage/);
+});

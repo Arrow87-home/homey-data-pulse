@@ -15,6 +15,246 @@
           is not a sign of failure.
         </p>
       </header>
+      <details id="help" class="card">
+        <summary>How to use Data Watchdog</summary>
+        <section id="help-basics" aria-labelledby="help-basics-title">
+          <h3 id="help-basics-title">What does Data Watchdog do?</h3>
+          <p>
+            Data Watchdog checks whether a device or integration still shows
+            valid activity or data delivery. It does not simply check whether a
+            measurement changes: a temperature can stay at 21.3 °C while the
+            sensor works perfectly.
+          </p>
+        </section>
+        <section id="help-quick-start" aria-labelledby="help-quick-start-title">
+          <h3 id="help-quick-start-title">Quick start</h3>
+          <ol>
+            <li>Choose an integration.</li>
+            <li>Choose the device you want to monitor.</li>
+            <li>
+              Choose how freshness should be checked, using the guidance below.
+            </li>
+            <li>Enter how often updates are normally expected.</li>
+            <li>
+              Choose how long to wait without a valid update before considering
+              the source stale.
+            </li>
+            <li>
+              Select Add monitor. Any fields that need attention will be
+              highlighted.
+            </li>
+            <li>
+              For phone notifications, create a Homey Flow using Any watchdog
+              incident started.
+            </li>
+          </ol>
+        </section>
+        <details id="help-methods">
+          <summary>Choosing a freshness method</summary>
+          <h3>Device activity</h3>
+          <p>
+            Use this when Homey reliably reports that the device or source is
+            still active through its last-seen time. Activity does not
+            necessarily mean that a new measurement was delivered. Not every
+            source provides usable last-seen information.
+          </p>
+          <h3>Delivery timestamp</h3>
+          <p>
+            Use this when the source provides a date and time that moves forward
+            whenever new data is delivered. A genuine delivery timestamp is
+            usually the strongest choice for checking data delivery. Select a
+            time field, not a temperature, counter or other measurement, and
+            match its Timestamp format. A preselected field still needs to have
+            the right meaning.
+          </p>
+          <p>
+            If several timestamp fields are selected, an update to any one of
+            them counts. This does not prove that every measurement is fresh.
+          </p>
+          <h3>Explicit heartbeat</h3>
+          <p>
+            Use this when a Flow, integration or API can tell Data Watchdog that
+            delivery succeeded. The confirmation must follow a real successful
+            delivery. Do not use a blind repeating timer to invent proof that a
+            production source is working.
+          </p>
+        </details>
+        <details id="help-timing">
+          <summary>Choosing the timing</summary>
+          <p>
+            <strong>Expected update interval:</strong> how often should the
+            source normally report activity or new data?
+          </p>
+          <p>
+            <strong>Consider stale after:</strong> how long may no valid update
+            arrive before the source is treated as stale?
+          </p>
+          <p>
+            For a source that normally reports every 5 minutes, you might enter
+            5 minutes and consider it stale after 15 minutes. Allow some margin
+            for delayed updates. The timeout must be at least the expected
+            interval. Device activity and Delivery timestamp require at least 2
+            minutes for the timeout.
+          </p>
+          <p>
+            The input arrows move in half-minute steps: 0.5 is 30 seconds; 1.5
+            is 90 seconds. A short confirmation period means an incident
+            notification may follow slightly after the timeout. Recovery also
+            needs to remain stable before the incident closes.
+          </p>
+        </details>
+        <details id="help-statuses">
+          <summary>Understanding monitor statuses</summary>
+          <dl>
+            <dt>WARMING_UP</dt>
+            <dd>
+              Waiting for a fresh update after setup, restart or a change to how
+              freshness is checked.
+            </dd>
+            <dt>HEALTHY</dt>
+            <dd>Recent valid activity or data delivery has been confirmed.</dd>
+            <dt>SUSPECTED_STALE</dt>
+            <dd>
+              The signal is overdue. Data Watchdog waits briefly before
+              declaring an incident.
+            </dd>
+            <dt>DEVICE_STALE</dt>
+            <dd>
+              The device has missed the configured stale period and an incident
+              is active. It may be grouped with other devices from the same
+              integration.
+            </dd>
+            <dt>RECOVERING</dt>
+            <dd>
+              Fresh updates have returned; waiting for stable recovery before
+              closing the incident.
+            </dd>
+            <dt>DISABLED</dt>
+            <dd>Monitoring is turned off for this monitor.</dd>
+            <dt>MISSING</dt>
+            <dd>
+              The configured device or required timestamp field cannot currently
+              be found.
+            </dd>
+            <dt>UNKNOWN</dt>
+            <dd>
+              A reliable state cannot currently be determined, for example
+              because observation is unavailable.
+            </dd>
+          </dl>
+        </details>
+        <details id="help-notifications">
+          <summary>Getting phone notifications</summary>
+          <p>
+            Data Watchdog detects incidents; it does not automatically send
+            everyone a push notification. Create a Homey Flow to choose who
+            receives messages and which incidents to report.
+          </p>
+          <ol>
+            <li>
+              <strong>WHEN:</strong> Data Watchdog → Any watchdog incident
+              started.
+            </li>
+            <li>
+              <strong>THEN:</strong> Homey → Send a push notification. Choose
+              the recipient and message.
+            </li>
+          </ol>
+          <p>
+            For an optional recovery message, create a second Flow using Any
+            watchdog incident recovered. You can use the device and integration
+            information supplied by the trigger in your message. Avoid sending
+            the same notification from both a general incident trigger and a
+            device-specific trigger.
+          </p>
+          <p>
+            If several monitors from the same integration stop reporting
+            together, Data Watchdog can group them into one integration
+            incident.
+          </p>
+        </details>
+        <details id="help-self-test">
+          <summary>Using the optional Local self-test</summary>
+          <p>
+            Pair Data Watchdog Test Source (simulation) only if you want a safe
+            local test of stale detection, recovery and your notification Flows.
+            It does not control production devices and is not needed for daily
+            monitoring. Test incidents can send real notifications through your
+            existing watchdog Flows.
+          </p>
+          <ul>
+            <li>
+              <strong>Start heartbeat:</strong> sends a heartbeat now, then
+              every 30 seconds.
+            </li>
+            <li>
+              <strong>Stop:</strong> stops the heartbeat and freezes the test
+              timestamp.
+            </li>
+            <li>
+              <strong>Send once:</strong> sends one heartbeat without starting a
+              stopped simulator. An already running simulator stays running.
+            </li>
+            <li>
+              After an app restart, the simulator deliberately starts STOPPED.
+            </li>
+          </ul>
+          <p>
+            For a first test, monitor the test device with Delivery timestamp,
+            Last test heartbeat, ISO format, a 0.5-minute expected interval and
+            a 3-minute timeout. Start, wait for HEALTHY, stop until an incident
+            appears, then start again to see recovery. Afterwards, disable only
+            the test monitor and stop the simulator.
+          </p>
+        </details>
+        <details id="help-advanced">
+          <summary>Editing and Technical note</summary>
+          <p>
+            Edit changes the existing monitor; Save changes keeps it, while
+            Cancel discards the draft. Changing the freshness method or timing
+            starts a new observation period. Disable pauses monitoring.
+          </p>
+          <p>
+            Technical note is optional. Use it to remember why you trust a
+            freshness signal. It does not affect detection or restart
+            monitoring.
+          </p>
+        </details>
+        <details id="help-troubleshooting">
+          <summary>If something does not look right</summary>
+          <p>
+            Use Refresh status. If WARMING_UP persists, check that the chosen
+            source is producing new updates. For MISSING, check the device and
+            timestamp field still exist. A normal rename alone does not remove a
+            monitor.
+          </p>
+          <p>
+            If Delivery timestamp never becomes HEALTHY, check the selected
+            field, format and whether its time moves forward. If Device activity
+            never becomes HEALTHY, the source may not provide reliable last-seen
+            information; choose another suitable method.
+          </p>
+          <p>
+            If no phone notification arrives, check your incident Flow, its
+            conditions, recipient and Homey push permissions.
+          </p>
+        </details>
+        <details id="help-limitations">
+          <summary>Important limitations</summary>
+          <p>
+            Monitoring is only as trustworthy as the selected freshness signal.
+            A wrong time field can make an unhealthy source appear healthy. An
+            unchanged measurement is not proof of a fault, and activity is not
+            proof of new measurement data.
+          </p>
+          <p>
+            If the whole Homey stops running, Data Watchdog on that same Homey
+            cannot report its own outage. Monitoring the entire host requires a
+            separate solution outside that Homey; this app does not provide that
+            external monitoring.
+          </p>
+        </details>
+      </details>
       <p id="message" role="status" aria-live="polite"></p>
       <section aria-labelledby="monitors-title">
         <div class="section-heading">
@@ -149,7 +389,7 @@
                   ><input
                     id="expected"
                     type="number"
-                    step="any"
+                    step="0.5"
                     value="5"
                     inputmode="decimal"
                     aria-describedby="expected-help expected-error"
@@ -164,7 +404,7 @@
                   ><input
                     id="timeout"
                     type="number"
-                    step="any"
+                    step="0.5"
                     value="15"
                     inputmode="decimal"
                     aria-describedby="timeout-help timeout-error"
