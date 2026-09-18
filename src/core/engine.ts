@@ -1,6 +1,7 @@
 import {
   Clock,
   configSchema,
+  compatibleMonitorFingerprint,
   detectionFingerprint,
   DeviceIncident,
   IntegrationIncident,
@@ -45,8 +46,10 @@ export class WatchdogEngine {
     const matched = new Set<string>();
     for (const m of this.config.monitors) {
       this.monitors.set(m.id, m);
-      const compatible =
-        restored?.monitorFingerprints[m.id] === monitorFingerprint(m);
+      const compatible = compatibleMonitorFingerprint(
+        restored?.monitorFingerprints[m.id],
+        m,
+      );
       if (compatible) matched.add(m.id);
       const previous = compatible ? restored?.runtimes[m.id] : undefined;
       this.runtimes.set(m.id, {

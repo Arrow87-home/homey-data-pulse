@@ -44,9 +44,13 @@ Deze opdrachten veranderen een live Homey. Ze zijn tijdens deze opdracht **niet 
 
 ## Configureren
 
-De kleine App Settings-pagina toont geïnventariseerde integraties en apparaten. Selecteer een apparaat, een bewezen strategie, eventueel timestamp-capabilities en een verwacht interval/timeout. Beschrijf in het broncontract wat het signaal werkelijk bijwerkt. Schakel monitors individueel in/uit. Nieuwe inventarisapparaten worden nooit automatisch bewaakt. Integraties zonder apparaten blijven zichtbaar. De pagina toont observerstatus, ontbrekende metadata, monitorstatus en Flow-dispatchfouten.
+De kleine App Settings-pagina toont geïnventariseerde integraties en apparaten. Selecteer een apparaat, een bewezen strategie, eventueel timestamp-capabilities en een verwacht interval/timeout. Een technische notitie is optioneel onder Advanced. Schakel monitors individueel in/uit. Nieuwe inventarisapparaten worden nooit automatisch bewaakt. Integraties zonder apparaten blijven zichtbaar. De pagina toont observerstatus, ontbrekende metadata, monitorstatus en Flow-dispatchfouten.
 
-**Edit** laadt een bestaande monitor. **Save changes** vervangt dezelfde monitor-ID; **Cancel** verwerpt het concept zonder write. Apparaat- en bronidentiteit blijven vast tijdens UI-edit. Strategie, timestamp-capabilities/encoding, interval, timeout, enabled en broncontract zijn bewerkbaar. Detectiewijzigingen starten die monitor opnieuw met grace; presentatievelden en ongewijzigde monitors behouden compatibele runtime. Een lopend incident dat incompatibel wordt, eindigt administratief zonder valse herstelmelding.
+**Edit** laadt een bestaande monitor. **Save changes** vervangt dezelfde monitor-ID; **Cancel** verwerpt het concept zonder write. Apparaat- en bronidentiteit blijven vast tijdens UI-edit. Strategie, timestamp-capabilities/encoding, interval, timeout, enabled en technische notitie zijn bewerkbaar. De notitie (`sourceContract`) is metadata en veroorzaakt geen nieuwe grace. Detectiewijzigingen starten die monitor opnieuw met grace; presentatievelden en ongewijzigde monitors behouden compatibele runtime. Een lopend incident dat incompatibel wordt, eindigt administratief zonder valse herstelmelding.
+
+Freshness check gebruikt begrijpelijke radiokeuzes: Device activity, Delivery timestamp en Explicit heartbeat. Alleen Delivery timestamp toont checkboxen en encoding. Eén ondersteund veld wordt vooraf aangevinkt; controleer zelf of het werkelijk een levertijd bevat. Bij meerdere velden kies je expliciet. Fouten verschijnen bij het veld en bij Add/Save, met focus op het eerste probleem. Een backendfout bewaart het concept; een geslaagde write blijft zichtbaar als statusverversing mislukt. Monitors, self-test en observerstatus hebben aparte kaarten; technische gegevens staan onder Details/Diagnostics.
+
+Zie [UX- en compatibilityrapport](docs/ui-polish-report.md) voor de gereproduceerde Add-fout, snapshotcompatibiliteit en veilige vervolgtest.
 
 Voor geavanceerde correlatie-instellingen blijft de geauthenticeerde config-API beschikbaar. `PUT` vervangt de volledige configuratie; lees eerst `GET /config`.
 

@@ -30,7 +30,7 @@ export const monitorSchema = z
     deviceName: id,
     zone: z.string().max(200).default(''),
     strategy: strategySchema,
-    sourceContract: z.string().min(10).max(2000),
+    sourceContract: z.string().max(2000).default(''),
     expectedIntervalMs: ms,
     staleTimeoutMs: ms,
     enabled: z.boolean(),
@@ -38,6 +38,7 @@ export const monitorSchema = z
   .strict()
   .refine((m) => m.staleTimeoutMs >= m.expectedIntervalMs, {
     message: 'staleTimeoutMs must be >= expectedIntervalMs',
+    path: ['staleTimeoutMs'],
   });
 export const DEFAULTS = {
   schedulerMs: 10_000,
@@ -172,7 +173,6 @@ export function detectionFingerprint(config: WatchdogConfig): string {
         sourceAppId: m.sourceAppId,
         deviceId: m.deviceId,
         strategy: m.strategy,
-        sourceContract: m.sourceContract,
         expectedIntervalMs: m.expectedIntervalMs,
         staleTimeoutMs: m.staleTimeoutMs,
         enabled: m.enabled,
@@ -187,4 +187,28 @@ export function monitorFingerprint(m: MonitorConfig): string {
     monitors: [m],
     policy: policySchema.parse({}),
   });
+}
+
+/** Read compatibility for v1 snapshots produced before notes became metadata.
+ * Strip only the former note field; every detection field must still match exactly.
+ * Newly written snapshots always use the current fingerprint. */
+export function compatibleMonitorFingerprint(
+  saved: string | undefined,
+  monitor: MonitorConfig,
+): boolean {
+  const current = monitorFingerprint(monitor);
+  if (saved === current) return true;
+  if (!saved) return false;
+  try {
+    const legacy = JSON.parse(saved);
+    if (
+      legacy.monitors?.length !== 1 ||
+      typeof legacy.monitors[0].sourceContract !== 'string'
+    )
+      return false;
+    delete legacy.monitors[0].sourceContract;
+    return JSON.stringify(legacy) === current;
+  } catch {
+    return false;
+  }
 }

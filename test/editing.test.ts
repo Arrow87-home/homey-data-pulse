@@ -70,12 +70,6 @@ const changes: [string, (m: MonitorConfig) => void][] = [
     },
   ],
   [
-    'contract',
-    (m) => {
-      m.sourceContract = 'A different delivery contract';
-    },
-  ],
-  [
     'source identity',
     (m) => {
       m.sourceAppId = 'other';
@@ -126,6 +120,7 @@ test('presentation-only editing preserves active incident and recovery progress;
     deviceName: 'New name',
     sourceAppName: 'New source name',
     zone: 'Upstairs',
+    sourceContract: '',
   });
   const next = engine.reconfigure(nextConfig);
   assert.deepEqual(next.runtimeView('a'), engine.runtimeView('a'));
@@ -170,7 +165,7 @@ test('metadata edit preserves integration recovery stability without duplicate i
   engine.evaluate();
   assert.equal(engine.integrationStatus('source'), 'RECOVERING');
   const edited = structuredClone(engine.config);
-  edited.monitors[0].deviceName = 'Renamed';
+  edited.monitors[0].sourceContract = '';
   const next = engine.reconfigure(edited);
   assert.deepEqual(
     next.snapshot().integrations,

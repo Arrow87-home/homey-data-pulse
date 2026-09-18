@@ -48,9 +48,16 @@ export function identifySource(device: DeviceRecord): {
   resolved: boolean;
 } {
   const owner = device.ownerUri?.match(/^homey:app:([^:]+)$/)?.[1];
-  const driver =
-    device.driverId?.match(/^homey:app:([^:]+):.+$/)?.[1] ??
-    device.driverUri?.match(/^homey:app:([^:]+)$/)?.[1];
+  // Modern qualified IDs also include built-in manager drivers, not just apps.
+  const qualified = device.driverId?.match(/^homey:([^:]+):([^:]+):(.+)$/);
+  let driver = qualified?.[1] === 'app' ? qualified[2] : undefined;
+  if (!qualified) {
+    // homey-api 3.20's deprecated prototype getter only warns and returns undefined.
+    // Old plain API records can carry an actual own data property instead.
+    const legacy = Object.getOwnPropertyDescriptor(device, 'driverUri');
+    if (legacy && 'value' in legacy && typeof legacy.value === 'string')
+      driver = legacy.value.match(/^homey:app:([^:]+)$/)?.[1];
+  }
   if (owner && driver && owner !== driver)
     return { id: `unresolved:${device.id}`, resolved: false };
   if (owner || driver) return { id: (owner ?? driver)!, resolved: true };
@@ -96,8 +103,7 @@ export function buildInventory(
         source.id === TEST_APP_ID &&
         device.data?.id === TEST_DATA_ID &&
         (device.driverId === `homey:app:${TEST_APP_ID}:${TEST_DRIVER_ID}` ||
-          (device.driverUri === `homey:app:${TEST_APP_ID}` &&
-            device.driverId === TEST_DRIVER_ID)),
+          device.driverId === TEST_DRIVER_ID),
       capabilities: (
         device.capabilities ?? Object.keys(device.capabilitiesObj ?? {})
       ).map((id) => ({

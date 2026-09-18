@@ -31,7 +31,7 @@ No requirement that all installed apps call `setLastSeenAt` was found. Activity 
 
 ### 3. Source app identity
 
-Inventory reads `devices.getDevices()`, `apps.getApps()` and `zones.getZones()`. Local API schema includes device `ownerUri`, `driverId`, zone, capability objects and `lastSeenAt`. Prefer an exact `homey:app:<id>` owner URI; use a fully qualified `homey:app:<id>:<driver>` driver ID as fallback. Older `driverUri` is only a compatibility fallback. Conflicts are marked unresolved. System/virtual owners are preserved as separate identifiers; unknown owners are isolated per device, never grouped into one fictitious app. Names are display metadata, never keys. Uninstalled apps and removed devices do not delete saved selections.
+Inventory reads `devices.getDevices()`, `apps.getApps()` and `zones.getZones()`. Local API schema includes device `ownerUri`, `driverId`, zone, capability objects and `lastSeenAt`. Use fully qualified `driverId` and cross-check an exact app owner URI. Qualified built-in manager drivers also avoid deprecated properties. If no qualified ID exists, only an own legacy `driverUri` data property is used as a lazy compatibility fallback; the current client's warning-only accessor is never invoked. Short local driver IDs can use owner identity. Conflicts are marked unresolved. System/virtual owners are preserved as separate identifiers; unknown owners are isolated per device, never grouped into one fictitious app. Names are display metadata, never keys. Uninstalled apps and removed devices do not delete saved selections.
 
 ### 4. SHS feasibility
 
@@ -39,7 +39,7 @@ The official SDK's Homey platform table explicitly identifies SHS and Pro 2023/m
 
 ### 5–7. Strategy choice, limitations and false positives
 
-Three explicit strategies ship: `timestamp-capability` (ISO/epoch seconds/epoch milliseconds), `device-last-seen` (activity), and `manual` (successful delivery attestation). Each needs a human-readable `sourceContract` documenting what advances it and how often. No automatic selection based on a capability name. Timestamp strategy supports selected capabilities with **any-of** semantics: any advancing timestamp refreshes the device; this is device/source liveness, not an assertion that every field is fresh. One monitor per device prevents double counting.
+Three explicit strategies ship: `timestamp-capability` (ISO/epoch seconds/epoch milliseconds), `device-last-seen` (activity), and `manual` (successful delivery attestation). `sourceContract` is optional documentation (default empty), not a detection rule. Timestamp fields remain an explicit user choice; a sole field of supported type is preselected in the UI after choosing a device, with source-semantics guidance. The core never infers delivery from a capability name or ordinary measurement. Timestamp strategy supports selected capabilities with **any-of** semantics: any advancing timestamp refreshes the device; this is device/source liveness, not an assertion that every field is fresh. One monitor per device prevents double counting.
 
 Repeated timestamp snapshots, timestamp replay, backward timestamps, invalid types, and future times are ignored. Retained snapshots count at their source time, never their retrieval time. A stale timestamp cannot recover a monitor. A first heartbeat is not invented at app startup. A monitor with no first evidence eventually reports missing verified evidence, with an empty last-delivery token. Sleeping/event-only devices need an appropriate source contract and timeout or should remain unselected.
 
@@ -89,7 +89,7 @@ Homey Flow execution and settings writes are not one transaction. The implementa
 
 ### Adapter and scheduling
 
-Small structural TypeScript interfaces wrap official API objects. Only selected timestamp capabilities get listeners. Each device has at most one listener per selected capability; all are destroyed on reconfiguration/shutdown. Explicit connection status plus periodic uncached snapshots detect observer problems. One scheduler coordinates evaluation and low-frequency reconciliation; no timer per monitor. Repeated inventory requests are coalesced; subscriptions are diffed. API calls are bounded, sequential or in small fixed batches, and failures do not erase inventory/configuration. Settings view refresh is user initiated.
+Small structural TypeScript interfaces wrap official API objects. Only selected timestamp capabilities get listeners. Each device has at most one listener per selected capability; unchanged listeners are reused during reconfiguration, changed/removed listeners are destroyed, and shutdown destroys all listeners. Explicit connection status plus periodic uncached snapshots detect observer problems. One scheduler coordinates evaluation and low-frequency reconciliation; no timer per monitor. Repeated inventory requests are coalesced; subscriptions are diffed. API calls are bounded, sequential or in small fixed batches, and failures do not erase inventory/configuration. Settings view refresh is user initiated.
 
 ### External SHS heartbeat (future transport)
 
@@ -108,3 +108,7 @@ Define an `ExternalHeartbeatSink` with payload `{schemaVersion, instanceId, boot
 - [App API and default authentication](https://apps.developer.homey.app/advanced/web-api)
 - [Settings persistence](https://apps.developer.homey.app/the-basics/app/persistent-storage), [Settings manager](https://apps-sdk-v3.developer.homey.app/ManagerSettings.html), [Lifecycle](https://apps-sdk-v3.developer.homey.app/App.html)
 - [SHS product and failure domain](https://homey.app/en-us/homey-self-hosted-server/)
+
+## Configuration polish compatibility
+
+Notes are excluded from detection fingerprints. Version-1 snapshots from before that change remain readable: normalize only the legacy per-monitor `sourceContract` key and require all other fingerprint content to match exactly. Newly saved snapshots use the note-free fingerprint. This does not relax policy/detection compatibility or the established full observation grace on process restart. In-process note-only edits preserve runtime, incident identity and recovery progress.

@@ -4,132 +4,266 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="/homey.js" data-origin="settings"></script>
-    <style>
-      body {
-        font: 15px system-ui;
-        margin: 20px;
-        max-width: 760px;
-      }
-      label {
-        display: block;
-        margin-top: 12px;
-      }
-      input,
-      select,
-      textarea,
-      button {
-        font: inherit;
-        padding: 8px;
-        max-width: 100%;
-        box-sizing: border-box;
-      }
-      select,
-      textarea {
-        width: 100%;
-      }
-      textarea {
-        height: 80px;
-      }
-      button {
-        margin: 12px 8px 4px 0;
-      }
-      li {
-        margin-bottom: 12px;
-      }
-      small {
-        display: block;
-        color: #555;
-      }
-      .error {
-        color: #a00;
-      }
-      pre {
-        white-space: pre-wrap;
-      }
-    </style>
+    <link rel="stylesheet" href="settings.css" />
   </head>
   <body>
-    <h1>Data Watchdog</h1>
-    <p>
-      Select devices only when you know which signal proves fresh delivery. An
-      unchanged measurement is not a heartbeat.
-    </p>
-    <p id="message" role="status"></p>
-    <h2>Monitors</h2>
-    <ul id="monitors"></ul>
-    <button id="refresh">Refresh status</button>
-    <h2 id="form-title">Add monitor</h2>
-    <label>Integration<select id="source"></select></label>
-    <label>Device<select id="device"></select></label>
-    <label
-      >Evidence<select id="strategy">
-        <option value="manual">
-          Explicit heartbeat via authenticated API / Flow
-        </option>
-        <option value="device-last-seen">
-          Source-maintained lastSeenAt (device activity)
-        </option>
-        <option value="timestamp-capability">
-          Explicit delivery timestamp capability
-        </option>
-      </select></label
-    >
-    <label
-      >Timestamp capabilities (Ctrl/Cmd to select multiple)<select
-        id="capabilities"
-        multiple
-      ></select
-    ></label>
-    <label
-      >Timestamp encoding<select id="encoding">
-        <option value="iso">ISO date with timezone</option>
-        <option value="epoch-seconds">Epoch seconds</option>
-        <option value="epoch-ms">Epoch milliseconds</option>
-      </select></label
-    >
-    <label
-      >Expected interval (minutes)<input
-        id="expected"
-        type="number"
-        min="0.5"
-        step="0.5"
-        value="5"
-    /></label>
-    <label
-      >Stale timeout (minutes)<input
-        id="timeout"
-        type="number"
-        min="2"
-        step="0.5"
-        value="15"
-    /></label>
-    <label
-      >Source contract<textarea
-        id="contract"
-        placeholder="What updates this signal, after which successful operation, and how often?"
-      ></textarea>
-    </label>
-    <label><input type="checkbox" id="enabled" checked /> Enabled</label>
-    <button id="add">Add monitor</button>
-    <button id="cancel" hidden>Cancel</button>
-    <small
-      >lastSeenAt means activity, not necessarily a new measurement. No
-      capability is selected automatically. New devices appear without changing
-      your saved monitors.</small
-    >
-    <h2>Local self-test (simulation)</h2>
-    <p>
-      Optional Data Watchdog test device only. Starting sends a heartbeat every
-      30 seconds. Stopping freezes its timestamp. Each app restart starts
-      stopped. Test incidents use the normal watchdog Flows, including existing
-      notification Flows.
-    </p>
-    <pre id="test-status"></pre>
-    <button id="test-start">Start test heartbeat</button>
-    <button id="test-stop">Stop test heartbeat</button>
-    <button id="test-send">Send test heartbeat now</button>
-    <h2>Observer status</h2>
-    <pre id="status"></pre>
+    <main>
+      <header>
+        <h1>Data Watchdog</h1>
+        <p>
+          Know when your sources stop reporting. An unchanged measurement alone
+          is not a sign of failure.
+        </p>
+      </header>
+      <p id="message" role="status" aria-live="polite"></p>
+      <section aria-labelledby="monitors-title">
+        <div class="section-heading">
+          <h2 id="monitors-title">Monitors</h2>
+          <button id="refresh" type="button">Refresh status</button>
+        </div>
+        <p id="monitors-empty">
+          No monitors yet. Add a source below to get started.
+        </p>
+        <ul id="monitors" class="monitor-list"></ul>
+      </section>
+      <section class="card" aria-labelledby="form-title">
+        <h2 id="form-title">Add monitor</h2>
+        <form id="monitor-form" novalidate>
+          <fieldset id="draft-fields" class="form-fields">
+            <legend class="sr-only">Monitor configuration</legend>
+            <div class="field">
+              <label for="source">1. Integration</label
+              ><select id="source" aria-describedby="source-error"></select>
+              <p class="field-error" id="source-error" hidden></p>
+            </div>
+            <div class="field">
+              <label for="device">2. Device</label
+              ><select
+                id="device"
+                aria-describedby="device-help device-error"
+              ></select
+              ><small id="device-help"
+                >Choose the device whose freshness you want to monitor.</small
+              >
+              <p class="field-error" id="device-error" hidden></p>
+            </div>
+            <fieldset
+              id="strategy"
+              class="field"
+              aria-describedby="strategy-error"
+            >
+              <legend>3. How should freshness be checked?</legend>
+              <label class="choice"
+                ><input
+                  id="strategy-device-last-seen"
+                  type="radio"
+                  name="strategy"
+                  value="device-last-seen"
+                /><span
+                  ><strong>Device activity</strong
+                  ><small
+                    >Use Homey's last-seen time to check whether the device or
+                    source is active. This proves activity, not necessarily a
+                    new measurement.</small
+                  ></span
+                ></label
+              >
+              <label class="choice"
+                ><input
+                  id="strategy-timestamp-capability"
+                  type="radio"
+                  name="strategy"
+                  value="timestamp-capability"
+                /><span
+                  ><strong>Delivery timestamp</strong
+                  ><small
+                    >Use a timestamp that the source updates when new data is
+                    delivered.</small
+                  ></span
+                ></label
+              >
+              <label class="choice"
+                ><input
+                  id="strategy-manual"
+                  type="radio"
+                  name="strategy"
+                  value="manual"
+                  checked
+                /><span
+                  ><strong>Explicit heartbeat</strong
+                  ><small
+                    >The source confirms delivery through a Flow or API
+                    heartbeat.</small
+                  ></span
+                ></label
+              >
+              <p class="field-error" id="strategy-error" hidden></p>
+            </fieldset>
+            <div id="timestamp-fields" hidden>
+              <fieldset
+                id="capabilities"
+                class="field"
+                tabindex="-1"
+                aria-describedby="capabilities-help capabilities-error"
+              >
+                <legend>Which field contains the delivery timestamp?</legend>
+                <small id="capabilities-help"
+                  >Choose a timestamp, not a measurement. If you select several
+                  fields, a new time in any one counts as an update. Check what
+                  the source actually reports.</small
+                >
+                <div id="capability-options"></div>
+                <small id="capabilities-empty" hidden
+                  >No timestamp-compatible fields are currently listed for this
+                  device. Refresh the inventory or choose another freshness
+                  check.</small
+                >
+                <p class="field-error" id="capabilities-error" hidden></p>
+              </fieldset>
+              <div class="field">
+                <label for="encoding">Timestamp format</label
+                ><select
+                  id="encoding"
+                  aria-describedby="encoding-help encoding-error"
+                >
+                  <option value="iso">
+                    Date and time (ISO, with timezone)
+                  </option>
+                  <option value="epoch-seconds">Unix time in seconds</option>
+                  <option value="epoch-ms">
+                    Unix time in milliseconds
+                  </option></select
+                ><small id="encoding-help"
+                  >Match the format used by the source. The local test source
+                  uses ISO.</small
+                >
+                <p class="field-error" id="encoding-error" hidden></p>
+              </div>
+            </div>
+            <fieldset class="field">
+              <legend>4. Timing</legend>
+              <div class="timing-grid">
+                <div>
+                  <label for="expected"
+                    >Expected update interval (minutes)</label
+                  ><input
+                    id="expected"
+                    type="number"
+                    step="any"
+                    value="5"
+                    inputmode="decimal"
+                    aria-describedby="expected-help expected-error"
+                  /><small id="expected-help"
+                    >How often should this source normally report activity or
+                    data?</small
+                  >
+                  <p class="field-error" id="expected-error" hidden></p>
+                </div>
+                <div>
+                  <label for="timeout">Consider stale after (minutes)</label
+                  ><input
+                    id="timeout"
+                    type="number"
+                    step="any"
+                    value="15"
+                    inputmode="decimal"
+                    aria-describedby="timeout-help timeout-error"
+                  /><small id="timeout-help"
+                    >Alert when no valid update has been seen for this long.
+                    Activity and timestamp checks require at least 2
+                    minutes.</small
+                  >
+                  <p class="field-error" id="timeout-error" hidden></p>
+                </div>
+              </div>
+            </fieldset>
+            <details id="advanced">
+              <summary>5. Advanced (optional)</summary>
+              <div class="field">
+                <label for="contract">Technical note (optional)</label
+                ><textarea
+                  id="contract"
+                  maxlength="2000"
+                  aria-describedby="contract-help contract-error"
+                ></textarea
+                ><small id="contract-help"
+                  >Optional note about why this signal provides reliable
+                  evidence of activity or delivery. Editing this note does not
+                  restart monitoring.</small
+                >
+                <p class="field-error" id="contract-error" hidden></p>
+              </div>
+            </details>
+            <label class="enabled"
+              ><input type="checkbox" id="enabled" checked /> Monitor
+              enabled</label
+            >
+          </fieldset>
+          <p
+            id="form-message"
+            class="action-message"
+            role="status"
+            aria-live="polite"
+            tabindex="-1"
+          ></p>
+          <details id="save-details" hidden>
+            <summary>Error details</summary>
+            <pre id="save-error-detail"></pre>
+          </details>
+          <div class="actions">
+            <button id="add" type="submit" class="primary">Add monitor</button
+            ><button id="cancel" type="button" hidden>Cancel</button>
+          </div>
+        </form>
+      </section>
+      <section class="card" aria-labelledby="test-title">
+        <div class="section-heading">
+          <h2 id="test-title">Local self-test</h2>
+          <span id="test-badge" class="badge" hidden></span>
+        </div>
+        <p class="subtitle">Data Watchdog Test Source (simulation)</p>
+        <p>
+          Local simulation only. Test incidents use your normal watchdog
+          notification Flows. Production devices are not controlled.
+        </p>
+        <p id="test-unpaired">
+          Pair the optional Data Watchdog Test Source device to run safe local
+          end-to-end tests.
+        </p>
+        <div id="test-paired" hidden>
+          <dl id="test-summary"></dl>
+          <details>
+            <summary>Technical details</summary>
+            <dl id="test-details"></dl>
+          </details>
+          <p class="muted">
+            Starts stopped after every app restart. Stop freezes the timestamp;
+            Send once leaves a stopped source stopped.
+          </p>
+          <div class="actions">
+            <button id="test-start" type="button" class="primary">
+              Start heartbeat</button
+            ><button id="test-stop" type="button">Stop</button
+            ><button id="test-send" type="button">Send once</button>
+          </div>
+        </div>
+        <p id="test-message" role="status" aria-live="polite"></p>
+      </section>
+      <section class="card" aria-labelledby="observer-title">
+        <h2 id="observer-title">Observation status</h2>
+        <dl id="observer-summary"></dl>
+        <p id="metadata-warning" hidden>
+          Some integration names or zones could not be loaded. Monitoring may
+          still be available.
+        </p>
+        <h3>Integrations</h3>
+        <ul id="integration-status" class="integration-list"></ul>
+        <details>
+          <summary>Diagnostics</summary>
+          <pre id="status"></pre>
+        </details>
+      </section>
+    </main>
     <script src="settings.js"></script>
   </body>
 </html>
