@@ -53,8 +53,11 @@ const manifest = {
   platforms: ['local'],
   name: { en: 'Data Watchdog', nl: 'Data Watchdog' },
   description: {
-    en: 'Monitor verified data delivery and group integration incidents',
-    nl: 'Bewaak bevestigde datalevering en bundel integratiestoringen',
+    en: 'Know when your Homey data stops arriving',
+    nl: 'Weet wanneer je Homey-data niet meer binnenkomt',
+  },
+  tags: {
+    en: ['monitoring', 'watchdog', 'reliability', 'devices', 'integrations'],
   },
   category: ['tools'],
   brandColor: '#245B68',
