@@ -75,6 +75,11 @@ const manifest = {
       id: 'test-source',
       name: { en: 'Data Watchdog Test Source (simulation)' },
       class: 'sensor',
+      images: {
+        small: '/drivers/test-source/assets/images/small.png',
+        large: '/drivers/test-source/assets/images/large.png',
+        xlarge: '/drivers/test-source/assets/images/xlarge.png',
+      },
       capabilities: ['last_test_heartbeat'],
       capabilitiesOptions: { last_test_heartbeat: { preventInsights: true } },
       pair: [
