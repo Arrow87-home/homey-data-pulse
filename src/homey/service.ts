@@ -120,22 +120,25 @@ export class WatchdogService {
           throw new Error('Device/source identity mismatch');
       }
       this.store.saveConfig(config);
-      const next = new WatchdogEngine(
-        config,
-        this.clock,
-        this.engine.snapshot(),
-      );
-      next.setObserving(false);
-      this.adapter.clearListeners();
-      this.engine = next;
+      this.engine = this.engine.reconfigure(config);
       this.lastSnapshot = -Infinity;
-      this.observerStatus = 'starting';
       await this.runTick();
     });
   }
-  heartbeat(id: string, deliveredAt: unknown): Promise<boolean> {
+  heartbeat(
+    id: string,
+    deliveredAt: unknown,
+    expectedDevice?: { deviceId: string; sourceAppId: string },
+  ): Promise<boolean> {
     return this.exclusive(async () => {
-      if (this.engine.monitor(id).strategy.kind !== 'manual')
+      const monitor = this.engine.monitor(id);
+      if (
+        expectedDevice &&
+        (monitor.deviceId !== expectedDevice.deviceId ||
+          monitor.sourceAppId !== expectedDevice.sourceAppId)
+      )
+        throw new Error('Heartbeat target changed');
+      if (monitor.strategy.kind !== 'manual')
         throw new Error('Monitor does not accept manual heartbeats');
       const at = parseTimestamp(deliveredAt, 'iso');
       if (at === null)

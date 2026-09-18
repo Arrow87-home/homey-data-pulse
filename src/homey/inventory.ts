@@ -1,3 +1,4 @@
+import { TEST_APP_ID, TEST_DATA_ID, TEST_DRIVER_ID } from './test-source';
 export interface CapabilityRecord {
   value?: unknown;
   lastUpdated?: unknown;
@@ -9,6 +10,7 @@ export interface CapabilityRecord {
 export interface DeviceRecord {
   id: string;
   name: string;
+  data?: { id?: unknown };
   ownerUri?: string;
   driverUri?: string;
   driverId?: string;
@@ -32,6 +34,7 @@ export interface InventoryDevice {
   zone: string;
   available: boolean | null;
   hasLastSeen: boolean;
+  isTestSource?: boolean;
   capabilities: { id: string; title: string; type: string }[];
 }
 export interface InventoryGroup {
@@ -88,6 +91,13 @@ export function buildInventory(
       zone: device.zone ? (zones[device.zone]?.name ?? device.zone) : '',
       available: device.available ?? null,
       hasLastSeen: device.lastSeenAt != null,
+      isTestSource:
+        source.resolved &&
+        source.id === TEST_APP_ID &&
+        device.data?.id === TEST_DATA_ID &&
+        (device.driverId === `homey:app:${TEST_APP_ID}:${TEST_DRIVER_ID}` ||
+          (device.driverUri === `homey:app:${TEST_APP_ID}` &&
+            device.driverId === TEST_DRIVER_ID)),
       capabilities: (
         device.capabilities ?? Object.keys(device.capabilitiesObj ?? {})
       ).map((id) => ({

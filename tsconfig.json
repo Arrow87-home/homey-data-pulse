@@ -10,6 +10,6 @@
     "sourceMap": true,
     "skipLibCheck": true
   },
-  "include": ["app.ts", "api.ts", "src/**/*.ts"],
+  "include": ["app.ts", "api.ts", "src/**/*.ts", "drivers/**/*.ts"],
   "exclude": ["node_modules", ".homeybuild", "test"]
 }

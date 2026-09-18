@@ -19,6 +19,49 @@
     "name": "Arrow87-home"
   },
   "permissions": ["homey:manager:api"],
+  "capabilities": {
+    "last_test_heartbeat": {
+      "type": "string",
+      "title": {
+        "en": "Last test heartbeat"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/drivers/test-source/assets/icon.svg"
+    }
+  },
+  "drivers": [
+    {
+      "id": "test-source",
+      "name": {
+        "en": "Data Watchdog Test Source (simulation)"
+      },
+      "class": "sensor",
+      "capabilities": ["last_test_heartbeat"],
+      "capabilitiesOptions": {
+        "last_test_heartbeat": {
+          "preventInsights": true
+        }
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          },
+          "options": {
+            "singular": true
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
+    }
+  ],
   "flow": {
     "triggers": [
       {
@@ -986,6 +1029,33 @@
     ],
     "actions": [
       {
+        "id": "start_test_heartbeat",
+        "title": {
+          "en": "Start test heartbeat"
+        },
+        "hint": {
+          "en": "Local Data Watchdog simulation only. Requires the optional test source device."
+        }
+      },
+      {
+        "id": "stop_test_heartbeat",
+        "title": {
+          "en": "Stop test heartbeat"
+        },
+        "hint": {
+          "en": "Local Data Watchdog simulation only. Requires the optional test source device."
+        }
+      },
+      {
+        "id": "send_test_heartbeat",
+        "title": {
+          "en": "Send test heartbeat now"
+        },
+        "hint": {
+          "en": "Local Data Watchdog simulation only. Requires the optional test source device."
+        }
+      },
+      {
         "id": "check_all",
         "title": {
           "en": "Check all monitors now"
@@ -1040,6 +1110,16 @@
     ]
   },
   "api": {
+    "getTestSource": {
+      "method": "GET",
+      "path": "/test-source",
+      "public": false
+    },
+    "postTestSource": {
+      "method": "POST",
+      "path": "/test-source",
+      "public": false
+    },
     "getInventory": {
       "method": "GET",
       "path": "/inventory",

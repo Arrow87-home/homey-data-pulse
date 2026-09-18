@@ -4,7 +4,8 @@ import { DEFAULTS, WatchdogEvent } from './src/core/model';
 import { HomeyApiAdapter, LocalApi } from './src/homey/api-adapter';
 import { SettingsPersistence } from './src/homey/persistence';
 import { WatchdogService } from './src/homey/service';
-import { flowTokens } from './src/homey/tokens';
+import { dispatchFlows } from './src/homey/flows';
+import { TestSource, TestAction } from './src/homey/test-source';
 
 class DataWatchdogApp extends Homey.App {
   service?: WatchdogService;
@@ -38,22 +39,37 @@ class DataWatchdogApp extends Homey.App {
     );
   }
   private async dispatch(event: WatchdogEvent): Promise<void> {
-    const tokens = flowTokens(event);
-    // Independent attempts: a failed specialized trigger must not skip the generic trigger.
-    const results = await Promise.allSettled([
-      this.homey.flow.getTriggerCard(event.type).trigger(tokens),
-      this.homey.flow
-        .getTriggerCard(
-          event.type.endsWith('_recovered')
-            ? 'any_incident_recovered'
-            : 'any_incident_started',
-        )
-        .trigger(tokens),
-    ]);
-    if (results.some((r) => r.status === 'rejected'))
-      throw new Error('Flow dispatch failed');
+    await dispatchFlows(this.homey.flow, event);
   }
+  private testSource?: TestSource;
+  registerTestSource(source: TestSource): void {
+    if (this.testSource && this.testSource !== source)
+      throw new Error('Only one local test source is supported');
+    this.testSource = source;
+  }
+  unregisterTestSource(source: TestSource): void {
+    if (this.testSource === source) this.testSource = undefined;
+  }
+  testSourceStatus() {
+    return this.testSource?.status() ?? { paired: false };
+  }
+  async testSourceAction(action: unknown): Promise<void> {
+    if (action !== 'start' && action !== 'stop' && action !== 'send')
+      throw new Error('Unknown test source action');
+    if (!this.testSource)
+      throw new Error('Add the Data Watchdog Test Source device first');
+    await this.testSource.action(action);
+  }
+
   private registerFlows(): void {
+    for (const action of ['start', 'stop', 'send'] as TestAction[]) {
+      this.homey.flow
+        .getActionCard(`${action}_test_heartbeat`)
+        .registerRunListener(async () => {
+          await this.testSourceAction(action);
+          return true;
+        });
+    }
     const service = this.service!;
     const monitorChoices = (query: string) =>
       service.engine.config.monitors
@@ -125,6 +141,7 @@ class DataWatchdogApp extends Homey.App {
   }
   async onUninit(): Promise<void> {
     if (this.timer) this.homey.clearInterval(this.timer);
+    await this.testSource?.dispose();
     await this.service?.stop();
   }
 }

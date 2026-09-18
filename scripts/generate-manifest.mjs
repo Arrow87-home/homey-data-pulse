@@ -60,6 +60,34 @@ const manifest = {
   brandColor: '#245B68',
   author: { name: 'Arrow87-home' },
   permissions: ['homey:manager:api'],
+  capabilities: {
+    last_test_heartbeat: {
+      type: 'string',
+      title: { en: 'Last test heartbeat' },
+      getable: true,
+      setable: false,
+      uiComponent: 'sensor',
+      icon: '/drivers/test-source/assets/icon.svg',
+    },
+  },
+  drivers: [
+    {
+      id: 'test-source',
+      name: { en: 'Data Watchdog Test Source (simulation)' },
+      class: 'sensor',
+      capabilities: ['last_test_heartbeat'],
+      capabilitiesOptions: { last_test_heartbeat: { preventInsights: true } },
+      pair: [
+        {
+          id: 'list_devices',
+          template: 'list_devices',
+          navigation: { next: 'add_devices' },
+          options: { singular: true },
+        },
+        { id: 'add_devices', template: 'add_devices' },
+      ],
+    },
+  ],
   flow: {
     triggers: [
       ['device_stale', 'Device became stale'],
@@ -82,6 +110,17 @@ const manifest = {
       })),
     ),
     actions: [
+      ...[
+        ['start', 'Start test heartbeat'],
+        ['stop', 'Stop test heartbeat'],
+        ['send', 'Send test heartbeat now'],
+      ].map(([action, title]) => ({
+        id: `${action}_test_heartbeat`,
+        title: { en: title },
+        hint: {
+          en: 'Local Data Watchdog simulation only. Requires the optional test source device.',
+        },
+      })),
       { id: 'check_all', title: { en: 'Check all monitors now' } },
       {
         id: 'check_monitor',
@@ -111,6 +150,8 @@ const manifest = {
   },
   api: Object.fromEntries(
     [
+      ['getTestSource', 'GET', '/test-source'],
+      ['postTestSource', 'POST', '/test-source'],
       ['getInventory', 'GET', '/inventory'],
       ['getStatus', 'GET', '/status'],
       ['getConfig', 'GET', '/config'],

@@ -412,3 +412,57 @@ test('service does not send alerts after a failed checkpoint and exposes persist
   fail = false;
   await service.stop();
 });
+
+test('editing reuses listeners targeting the current engine; strategy removal and re-add never duplicate listeners', async () => {
+  const fake = fakeApi();
+  const adapter = new HomeyApiAdapter(fake.api);
+  let time = 100_000;
+  const memory = new Map<string, unknown>([['watchdog-config', makeConfig()]]);
+  const store = new SettingsPersistence({
+    get: (k) => memory.get(k),
+    set: (k, v) => {
+      memory.set(k, v);
+    },
+  });
+  const service = new WatchdogService(
+    { now: () => time },
+    store,
+    adapter,
+    async () => {},
+  );
+  await service.start();
+  const initial = service.engine;
+  assert.equal(initial.status('m'), 'HEALTHY');
+  for (let i = 0; i < 3; i++) {
+    time += 1000;
+    const config = structuredClone(service.engine.config);
+    config.monitors[0].deviceName = 'UI metadata edit';
+    await service.configure(config);
+    assert.equal(service.engine.status('m'), 'HEALTHY');
+  }
+  assert.equal(fake.counts().created, 1);
+  time += 1000;
+  fake.emit(time);
+  await service.tick();
+  assert.equal(service.engine.runtimeView('m').lastDeliveryAt, time);
+  assert.equal(initial.runtimeView('m').lastDeliveryAt, 100_000);
+  const changed = structuredClone(service.engine.config);
+  changed.monitors[0].strategy = { kind: 'manual' };
+  time += 1000;
+  await service.configure(changed);
+  assert.equal(service.engine.status('m'), 'WARMING_UP');
+  assert.equal(fake.counts().destroyed, 1);
+  await assert.rejects(
+    service.heartbeat('m', new Date(time).toISOString(), {
+      deviceId: 'another',
+      sourceAppId: 'test.app',
+    }),
+    /target changed/,
+  );
+  assert.equal(service.engine.runtimeView('m').lastDeliveryAt, null);
+  await service.configure(makeConfig());
+  assert.equal(fake.counts().created, 2);
+  await service.stop();
+  assert.equal(fake.counts().destroyed, 2);
+  assert.equal(fake.emitter.listenerCount('device.update'), 0);
+});

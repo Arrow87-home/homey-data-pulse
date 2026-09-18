@@ -2,7 +2,7 @@
 
 Lokale watchdog voor aantoonbare datalevering en apparaatactiviteit, met gebundelde storingsmeldingen per bron-app. **Homey Self-Hosted Server is het primaire doelplatform**, naast Homey Pro 2023/mini/2026.
 
-Status: v0.1 ontwikkelbasis. De onafhankelijke engine en API-clientcontracten zijn lokaal getest. Er is nog niets op een live Homey geïnstalleerd en de app is niet gepubliceerd. Zie [onderzoek en architectuur](docs/architecture.md), [toestandsmodellen](docs/state-machines.md), [SHS-matrix](docs/shs-compatibility.md) en [opleverrapport](docs/delivery-report.md).
+Status: v0.1 ontwikkelbasis. De gebruiker heeft de app succesvol in development mode op SHS gestart. Deze uitbreiding is uitsluitend offline gevalideerd; er is tijdens deze wijziging niets op een live Homey geïnstalleerd of gewijzigd. Zie [onderzoek en architectuur](docs/architecture.md), [toestandsmodellen](docs/state-machines.md), [SHS-matrix](docs/shs-compatibility.md) en [opleverrapport](docs/delivery-report.md).
 
 ## Wat wordt werkelijk bewaakt?
 
@@ -40,18 +40,28 @@ npx homey select
 npx homey app install
 ```
 
-Deze opdrachten veranderen een live Homey. Ze zijn tijdens deze opdracht **niet uitgevoerd**. Volg daarna het [SHS-acceptatieprotocol](docs/shs-compatibility.md#authorized-next-experiment-not-run).
+Deze opdrachten veranderen een live Homey. Ze zijn tijdens deze opdracht **niet uitgevoerd**. Volg daarna de [geïsoleerde self-testacceptatie](docs/self-test.md#handmatige-shs-acceptatie).
 
 ## Configureren
 
 De kleine App Settings-pagina toont geïnventariseerde integraties en apparaten. Selecteer een apparaat, een bewezen strategie, eventueel timestamp-capabilities en een verwacht interval/timeout. Beschrijf in het broncontract wat het signaal werkelijk bijwerkt. Schakel monitors individueel in/uit. Nieuwe inventarisapparaten worden nooit automatisch bewaakt. Integraties zonder apparaten blijven zichtbaar. De pagina toont observerstatus, ontbrekende metadata, monitorstatus en Flow-dispatchfouten.
 
-Voor wijzigingen aan bestaande intervallen/strategie en geavanceerde correlatie-instellingen is in v0.1 de geauthenticeerde config-API beschikbaar. De volledige configuratie is een versioned document; `PUT` vervangt het geheel. Lees dus eerst `GET /config`, wijzig het document en schrijf het terug. De eenvoudige UI biedt toevoegen, aan/uit en verwijderen; een uitgebreide editor volgt later.
+**Edit** laadt een bestaande monitor. **Save changes** vervangt dezelfde monitor-ID; **Cancel** verwerpt het concept zonder write. Apparaat- en bronidentiteit blijven vast tijdens UI-edit. Strategie, timestamp-capabilities/encoding, interval, timeout, enabled en broncontract zijn bewerkbaar. Detectiewijzigingen starten die monitor opnieuw met grace; presentatievelden en ongewijzigde monitors behouden compatibele runtime. Een lopend incident dat incompatibel wordt, eindigt administratief zonder valse herstelmelding.
+
+Voor geavanceerde correlatie-instellingen blijft de geauthenticeerde config-API beschikbaar. `PUT` vervangt de volledige configuratie; lees eerst `GET /config`.
+
+## Lokale self-test
+
+Voeg optioneel één **Data Watchdog Test Source (simulation)** toe via Homey Devices. De eigen bron genereert iedere 30 seconden een ISO-timestamp, een expliciete native SDK-activiteitsmelding en indien geconfigureerd een manual heartbeat via de bestaande service. Er zijn geen writes naar andere apparaten. Start/stop/send staan in app-settings en als drie Flow-acties. Na iedere app-restart start de bron **gestopt**; de laatste echte timestamp blijft staan.
+
+Volg de [veilige SHS-acceptatietest en beperkingen](docs/self-test.md). Manual en timestamp zijn deterministisch testbaar. `device-last-seen` gebruikt de officiële `Device.setLastSeenAt()`; daadwerkelijke SHS-publicatie en freeze moeten nog handmatig worden bevestigd. Een capability-update alleen wordt niet als automatische lastSeen-garantie beschouwd.
 
 App API-basis: `/api/app/io.github.arrow87-home.datawatchdog`.
 
 | Methode | Route                   | Gebruik                                                               |
 | ------- | ----------------------- | --------------------------------------------------------------------- |
+| GET     | `/test-source`          | Status van de optionele eigen testbron                                |
+| POST    | `/test-source`          | `{ "action": "start" }`, `stop` of `send`; uitsluitend eigen testbron |
 | GET     | `/inventory`            | Laatste lokale inventaris, zonder ruwe meetwaarden/credentials        |
 | GET     | `/status`               | Observer, monitors en integratiestatus                                |
 | GET     | `/config`               | Opgeslagen configuratieschema                                         |
@@ -94,7 +104,7 @@ IDs en configuratie blijven behouden als een apparaat tijdelijk verdwijnt. Ontbr
 
 ## Meldingen via Flow
 
-Triggers: Device became stale/recovered, Integration became stale/recovered, Any watchdog incident started/recovered. Conditions: device/integration is healthy/stale. Actions: check monitor/all now en record confirmed delivery. De monitor-check evalueert de gezamenlijke correlatie mee en omzeilt de API-ratelimiet niet.
+Triggers: Device became stale/recovered, Integration became stale/recovered, Any watchdog incident started/recovered. Conditions: device/integration is healthy/stale. Actions: check monitor/all now, record confirmed delivery en Start/Stop/Send test heartbeat. De monitor-check evalueert de gezamenlijke correlatie mee en omzeilt de API-ratelimiet niet.
 
 Alle triggers hebben `source_app`, `source_app_id`, `device`, `device_id`, `zone`, `capability`, `last_delivery`, `age_minutes`, `expected_interval`, `stale_timeout`, `affected_devices`, `affected_count`, `monitored_count`, `recovered_count`, `incident_duration`, `stale_since`, `status`, `incident_id`, `evidence_kind`, `has_delivery`.
 
@@ -125,5 +135,6 @@ Herstel: apparaat moet één minuut stabiel zijn; daarna moet >=90% van de oorsp
 | `src/homey/`                   | Inventarisatie/subscriptions, settings-persistence, scheduler-service, Flow tokens                 |
 | `app.ts`, `api.ts`, `app.json` | SDK-entrypoint, geauthenticeerde routes, manifest/Flow cards                                       |
 | `settings/`                    | Kleine bron/apparaatselectie en statuspagina                                                       |
+| `drivers/test-source/`         | Optionele eigen virtuele simulatiebron, SDK-capability en lifecycle                                |
 | `test/`                        | Fake-clock scenario's, officiële clientcontracten, adapter/service-tests                           |
 | `docs/`                        | Onderzoek, architectuur, compatibiliteit en overdracht                                             |

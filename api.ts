@@ -9,6 +9,15 @@ function service({ homey }: Request) {
   return homey.app.service;
 }
 export = {
+  async getTestSource({ homey }: Request) {
+    return homey.app.testSourceStatus();
+  },
+  async postTestSource({ homey, body }: Request) {
+    await homey.app.testSourceAction(
+      (body as { action?: unknown } | null)?.action,
+    );
+    return homey.app.testSourceStatus();
+  },
   async getInventory(request: Request) {
     return service(request).adapter.inventory;
   },

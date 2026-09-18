@@ -43,6 +43,7 @@ export class HomeyApiAdapter {
   inventoryDirty = true;
   private apps: Record<string, AppRecord> = {};
   private zones: Record<string, { name: string }> = {};
+  private engine?: WatchdogEngine;
   private listeners = new Map<
     string,
     { device: ApiDevice; handle: { destroy(): void } }
@@ -62,6 +63,7 @@ export class HomeyApiAdapter {
   }
 
   async refresh(engine: WatchdogEngine, metadata: boolean): Promise<void> {
+    this.engine = engine;
     if (!this.api.devices.isConnected()) await this.api.devices.connect();
     const devices = await this.api.devices.getDevices({
       $cache: false,
@@ -109,13 +111,26 @@ export class HomeyApiAdapter {
           if (existing?.device === device) continue;
           existing?.handle.destroy();
           const handle = device.makeCapabilityInstance(capability, (value) => {
+            const target = this.engine;
+            const current = target?.config.monitors.find(
+              (monitor) => monitor.id === m.id,
+            );
+            if (
+              !target ||
+              !current ||
+              current.deviceId !== device.id ||
+              current.sourceAppId !== identifySource(device).id ||
+              current.strategy.kind !== 'timestamp-capability' ||
+              !current.strategy.capabilities.includes(capability)
+            )
+              return;
             for (const detector of detectors) {
               const time = detector.read(
-                m,
+                current,
                 { capabilities: { [capability]: { value } } },
-                engine.clock.now(),
+                target.clock.now(),
               );
-              if (time !== null) engine.recordDelivery(m.id, time);
+              if (time !== null) target.recordDelivery(current.id, time);
             }
           });
           this.listeners.set(key, { device, handle });

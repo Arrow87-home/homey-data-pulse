@@ -92,6 +92,28 @@ export class WatchdogEngine {
     if (value) this.resume();
   }
 
+  /** In-process config edits preserve only state covered by the existing fingerprints.
+   * Restarts still use the constructor's full observation grace. */
+  reconfigure(config: WatchdogConfig): WatchdogEngine {
+    const next = new WatchdogEngine(config, this.clock, this.snapshot());
+    next.observing = this.observing;
+    next.lastEvaluation = this.lastEvaluation;
+    if (
+      JSON.stringify(next.config.policy) !== JSON.stringify(this.config.policy)
+    )
+      return next;
+    for (const m of next.config.monitors) {
+      const previous = this.monitors.get(m.id);
+      if (previous && monitorFingerprint(previous) === monitorFingerprint(m))
+        next.runtimes.set(m.id, structuredClone(this.runtime(m.id)));
+    }
+    for (const [source, incident] of next.integrationIncidents) {
+      incident.recoveringSince =
+        this.integrationIncidents.get(source)?.recoveringSince ?? null;
+    }
+    return next;
+  }
+
   private resume(): void {
     const now = this.clock.now();
     for (const m of this.config.monitors) {
