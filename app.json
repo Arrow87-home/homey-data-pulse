@@ -1,10 +1,12 @@
 {
   "id": "io.github.arrow87-home.datawatchdog",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "sdk": 3,
   "compatibility": ">=12.9.0",
   "runtime": "nodejs",
-  "platforms": ["local"],
+  "platforms": [
+    "local"
+  ],
   "name": {
     "en": "Data Watchdog",
     "nl": "Data Watchdog"
@@ -14,9 +16,17 @@
     "nl": "Weet wanneer je Homey-data niet meer binnenkomt"
   },
   "tags": {
-    "en": ["monitoring", "watchdog", "reliability", "devices", "integrations"]
+    "en": [
+      "monitoring",
+      "watchdog",
+      "reliability",
+      "devices",
+      "integrations"
+    ]
   },
-  "category": ["tools"],
+  "category": [
+    "tools"
+  ],
   "brandColor": "#245B68",
   "images": {
     "small": "/assets/images/small.png",
@@ -26,7 +36,9 @@
   "author": {
     "name": "Arrow87-home"
   },
-  "permissions": ["homey:manager:api"],
+  "permissions": [
+    "homey:manager:api"
+  ],
   "capabilities": {
     "last_test_heartbeat": {
       "type": "string",
@@ -51,7 +63,9 @@
         "large": "/drivers/test-source/assets/images/large.png",
         "xlarge": "/drivers/test-source/assets/images/xlarge.png"
       },
-      "capabilities": ["last_test_heartbeat"],
+      "capabilities": [
+        "last_test_heartbeat"
+      ],
       "capabilitiesOptions": {
         "last_test_heartbeat": {
           "preventInsights": true
