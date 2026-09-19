@@ -46,7 +46,7 @@ const argument = (name) => ({
 });
 const manifest = {
   id: 'io.github.arrow87-home.datawatchdog',
-  version: '0.1.0',
+  version: '0.1.1',
   sdk: 3,
   compatibility: '>=12.9.0',
   runtime: 'nodejs',
