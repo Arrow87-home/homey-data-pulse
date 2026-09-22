@@ -165,6 +165,28 @@ test('inventory includes apps without devices and tracks names/zones without aut
   );
 });
 
+test('inventory exposes actual driver metadata for UI shortcuts without inferring a type from names', () => {
+  const [group] = buildInventory(
+    {
+      a: { id: 'a', name: 'Same name', driverId: 'homey:app:test:sensor' },
+      b: { id: 'b', name: 'Same name', ownerUri: 'homey:app:test' },
+      c: {
+        id: 'c',
+        name: 'Other name',
+        ownerUri: 'homey:app:test',
+        driverId: 'sensor',
+      },
+    },
+    {},
+    {},
+  );
+  assert.deepEqual(
+    group.devices.map((d) => d.driverId),
+    ['homey:app:test:sensor', undefined, 'sensor'],
+  );
+  assert.ok(group.devices.every((d) => d.identityResolved));
+});
+
 function fakeApi() {
   let connected = true,
     calls = 0,

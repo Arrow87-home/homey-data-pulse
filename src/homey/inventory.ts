@@ -31,6 +31,8 @@ export interface InventoryDevice {
   sourceAppId: string;
   sourceAppName: string;
   identityResolved: boolean;
+  /** Display-only metadata for optional same-driver timing shortcuts in settings. */
+  driverId?: string;
   zone: string;
   available: boolean | null;
   hasLastSeen: boolean;
@@ -95,6 +97,7 @@ export function buildInventory(
       sourceAppId: source.id,
       sourceAppName,
       identityResolved: source.resolved,
+      driverId: device.driverId,
       zone: device.zone ? (zones[device.zone]?.name ?? device.zone) : '',
       available: device.available ?? null,
       hasLastSeen: device.lastSeenAt != null,

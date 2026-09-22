@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { configSchema, WatchdogConfig } from '../src/core/model';
+import { InventoryDevice } from '../src/homey/inventory';
 
 /** Minimal DOM boundary; the actual shipped JS handles every action and validation. */
 class Element {
@@ -47,6 +48,10 @@ const findButton = (element: Element, label: string): Element | undefined =>
   element.tag === 'button' && element.textContent === label
     ? element
     : element.children.map((child) => findButton(child, label)).find(Boolean);
+const descendants = (element: Element): Element[] => [
+  element,
+  ...element.children.flatMap(descendants),
+];
 const drain = () => new Promise<void>((resolve) => setImmediate(resolve));
 const initialConfig = () =>
   configSchema.parse({
@@ -71,12 +76,31 @@ const initialConfig = () =>
       },
     ],
   });
+const inventoryDevice = (
+  id: string,
+  driverId: string | undefined = 'sensor',
+  sourceAppId = 'app',
+): InventoryDevice => ({
+  deviceId: id,
+  deviceName: `Device ${id}`,
+  sourceAppId,
+  sourceAppName: sourceAppId,
+  driverId,
+  identityResolved: true,
+  zone: 'Lab',
+  available: true,
+  hasLastSeen: false,
+  capabilities: [
+    { id: 'timestamp', title: 'Delivery timestamp', type: 'string' },
+  ],
+});
 async function ui(
   options: {
     adding?: boolean;
     capabilities?: { id: string; title: string; type?: string }[];
     paired?: boolean;
     missingDevice?: boolean;
+    devices?: InventoryDevice[];
   } = {},
 ) {
   const elements = new Map<string, Element>();
@@ -90,7 +114,9 @@ async function ui(
     elements.set(item.id, item);
   }
   const get = (id: string) => {
-    const element = elements.get(id);
+    const element =
+      elements.get(id) ??
+      [...elements.values()].flatMap(descendants).find((e) => e.id === id);
     assert.ok(element, `Unknown DOM ID: ${id}`);
     return element;
   };
@@ -151,26 +177,36 @@ async function ui(
       }
       const values: Record<string, unknown> = {
         '/config': saved,
-        '/inventory': [
-          {
-            sourceAppId: 'app',
-            sourceAppName: 'App',
-            devices: options.missingDevice
-              ? []
-              : [
-                  {
-                    ...initialConfig().monitors[0],
-                    capabilities: options.capabilities ?? [
+        '/inventory': options.devices
+          ? [...new Set(options.devices.map((d) => d.sourceAppId))].map(
+              (id) => ({
+                sourceAppId: id,
+                sourceAppName: id,
+                devices: options.devices!.filter((d) => d.sourceAppId === id),
+              }),
+            )
+          : [
+              {
+                sourceAppId: 'app',
+                sourceAppName: 'App',
+                devices: options.missingDevice
+                  ? []
+                  : [
                       {
-                        id: 'timestamp',
-                        title: 'Last test heartbeat',
-                        type: 'string',
+                        ...initialConfig().monitors[0],
+                        identityResolved: true,
+                        driverId: 'homey:app:app:simulation',
+                        capabilities: options.capabilities ?? [
+                          {
+                            id: 'timestamp',
+                            title: 'Last test heartbeat',
+                            type: 'string',
+                          },
+                        ],
                       },
                     ],
-                  },
-                ],
-          },
-        ],
+              },
+            ],
         '/status': {
           observer: 'observing',
           restore: 'restored',
@@ -197,8 +233,34 @@ async function ui(
       get(`strategy-${k}`).checked = kind === k;
     get(`strategy-${kind}`).onchange!();
   };
+  const select = (...ids: string[]) => {
+    get('select-devices').onclick!();
+    for (const input of descendants(get('picker-options')).filter(
+      (e) => e.type === 'checkbox' && !e.disabled,
+    )) {
+      input.checked = ids.includes(input.value);
+      input.onchange!();
+    }
+    get('confirm-devices').onclick!();
+  };
+  const card = (id = 'd') => {
+    const result = get('selected-devices').children.find(
+      (e) => e.attributes.get('data-device-id') === id,
+    );
+    assert.ok(result, `Missing selected device: ${id}`);
+    return result;
+  };
+  const field = (key: string, id = 'd') => {
+    if (!get('edit-fields').hidden) return get(key);
+    const result = descendants(card(id)).find((e) => e.id.endsWith(`-${key}`));
+    assert.ok(result, `Missing setup field: ${key}`);
+    return result;
+  };
   return {
     get,
+    field,
+    select,
+    card,
     puts,
     initial,
     actions,
@@ -213,10 +275,259 @@ async function ui(
     edit: () => findButton(get('monitors'), 'Edit')!.onclick!(),
     submit: () => get('monitor-form').onsubmit!({ preventDefault() {} }),
     choose,
-    caps: () =>
-      get('capability-options').children.map((label) => label.children[0]),
+    caps: (id = 'd') =>
+      get('edit-fields').hidden
+        ? descendants(card(id)).filter((e) => e.type === 'checkbox' && e.value)
+        : get('capability-options').children.map((label) => label.children[0]),
   };
 }
+
+test('setup starts with the method, then a temporary picker; one selected source saves independently', async () => {
+  const f = await ui({ adding: true });
+  assert.equal(f.get('select-devices').disabled, true);
+  assert.equal(f.get('device-picker').hidden, true);
+  assert.equal(f.get('setup-timing').hidden, true);
+  await f.submit();
+  assert.equal(f.puts.length, 0);
+  assert.match(f.get('strategy-error').textContent, /Choose how/);
+  f.choose('device-last-seen');
+  assert.equal(f.get('select-devices').disabled, false);
+  f.select('d');
+  assert.equal(f.get('device-picker').hidden, true);
+  assert.equal(f.get('setup-timing').hidden, false);
+  assert.equal(f.get('selected-devices').children.length, 1);
+  await f.submit();
+  assert.equal(f.puts.length, 1);
+  assert.equal(f.saved().monitors[0].id, 'd');
+  assert.deepEqual(f.saved().monitors[0].strategy, {
+    kind: 'device-last-seen',
+  });
+  assert.equal(f.get('selected-devices').children.length, 0);
+});
+
+test('same app and driver shortcut copies timing; individual overrides and other types stay independent', async () => {
+  const devices = [
+    inventoryDevice('a'),
+    inventoryDevice('b'),
+    inventoryDevice('c', 'weather'),
+  ];
+  const f = await ui({ adding: true, devices });
+  f.choose('device-last-seen');
+  f.select('a', 'b', 'c');
+  assert.equal(f.get('selected-devices').children.length, 3);
+  assert.equal(f.get('similar-devices').children.length, 1);
+  f.field('expected', 'a').value = '360';
+  f.field('timeout', 'a').value = '1080';
+  findButton(f.get('similar-devices'), "Apply Device a's times to all 2")!
+    .onclick!();
+  assert.equal(f.field('expected', 'b').value, '360');
+  assert.equal(f.field('timeout', 'b').value, '1080');
+  assert.equal(f.field('expected', 'c').value, '5');
+  f.field('timeout', 'b').value = '1440';
+  f.field('expected', 'c').value = '10';
+  f.field('timeout', 'c').value = '90';
+  await f.submit();
+  assert.equal(f.puts.length, 1);
+  assert.deepEqual(
+    f
+      .saved()
+      .monitors.map((m) => [
+        m.id,
+        m.expectedIntervalMs / 60000,
+        m.staleTimeoutMs / 60000,
+      ]),
+    [
+      ['a', 360, 1080],
+      ['b', 360, 1440],
+      ['c', 10, 90],
+    ],
+  );
+  assert.ok(
+    f.saved().monitors.every((m) => !('group' in m) && !('driverId' in m)),
+  );
+});
+
+test('similar names, same app alone, missing driver metadata and unresolved identities never create timing groups', async () => {
+  const devices = [
+    inventoryDevice('a'),
+    inventoryDevice('b', 'different-driver'),
+    inventoryDevice('c', 'sensor', 'another-app'),
+    { ...inventoryDevice('d'), driverId: undefined },
+    { ...inventoryDevice('e'), identityResolved: false },
+  ].map((d) => ({ ...d, deviceName: 'Smoke detector' }));
+  const f = await ui({ adding: true, devices });
+  f.choose('manual');
+  f.select(...devices.map((d) => d.deviceId));
+  assert.equal(f.get('similar-devices').children.length, 0);
+  await f.submit();
+  assert.equal(f.saved().monitors.length, 5);
+  assert.equal(
+    f.saved().monitors.find((m) => m.deviceId === 'c')!.sourceAppId,
+    'another-app',
+  );
+});
+
+test('reopening the picker adds/removes devices, retains remaining drafts and never saves deselected sources', async () => {
+  const f = await ui({
+    adding: true,
+    devices: ['a', 'b', 'c'].map((id) => inventoryDevice(id)),
+  });
+  f.choose('manual');
+  f.select('a', 'b');
+  f.field('timeout', 'a').value = '99';
+  f.select('a', 'c');
+  assert.equal(f.field('timeout', 'a').value, '99');
+  assert.equal(f.get('selected-devices').children.length, 2);
+  f.get('select-devices').onclick!();
+  const a = descendants(f.get('picker-options')).find(
+    (e) => e.type === 'checkbox' && e.value === 'a',
+  )!;
+  a.checked = false;
+  a.onchange!();
+  f.get('cancel-devices').onclick!();
+  assert.equal(f.get('device-picker').hidden, true);
+  assert.equal(f.field('timeout', 'a').value, '99');
+  await f.submit();
+  assert.deepEqual(
+    f.saved().monitors.map((m) => m.deviceId),
+    ['a', 'c'],
+  );
+});
+
+test('empty or unconfirmed device selection cannot save; cancelling setup creates nothing', async () => {
+  const f = await ui({ adding: true });
+  f.choose('manual');
+  f.select('d');
+  f.get('select-devices').onclick!();
+  await f.submit();
+  assert.match(f.get('selection-error').textContent, /Confirm or cancel/);
+  f.get('cancel-devices').onclick!();
+  f.select();
+  await f.submit();
+  assert.equal(f.puts.length, 0);
+  assert.match(f.get('selection-error').textContent, /Select a device/);
+  f.select('d');
+  f.get('cancel').onclick!();
+  assert.equal(f.get('selected-devices').children.length, 0);
+  assert.equal(f.get('select-devices').disabled, true);
+  assert.equal(f.saved().monitors.length, 0);
+});
+
+test('bulk setup preserves existing records; summary filters lead to individual edits with stable IDs', async () => {
+  const f = await ui({
+    devices: [inventoryDevice('d'), inventoryDevice('a'), inventoryDevice('b')],
+  });
+  assert.match(f.text('monitor-summary'), /Delivery timestamp · 1/);
+  f.choose('manual');
+  f.select('d', 'a', 'b');
+  assert.equal(f.get('selected-devices').children.length, 2);
+  await f.submit();
+  assert.deepEqual(f.saved().monitors[0], f.initial.monitors[0]);
+  assert.match(f.text('monitor-summary'), /Explicit heartbeat · 2/);
+  findButton(f.get('monitor-summary'), 'Explicit heartbeat · 2')!.onclick!();
+  assert.equal(f.get('monitors').children.length, 2);
+  f.edit();
+  assert.equal(f.get('edit-fields').hidden, false);
+  assert.equal(f.get('setup-fields').hidden, true);
+  f.field('timeout').value = '77';
+  await f.submit();
+  assert.equal(f.saved().monitors.length, 3);
+  assert.deepEqual(
+    f.saved().monitors.map((m) => m.id),
+    ['stable-id', 'a', 'b'],
+  );
+  assert.equal(f.saved().monitors[1].staleTimeoutMs, 77 * 60000);
+  assert.equal(f.saved().monitors[2].staleTimeoutMs, 15 * 60000);
+  assert.deepEqual(f.saved().monitors[0], f.initial.monitors[0]);
+  findButton(f.get('monitor-summary'), 'All · 3')!.onclick!();
+  assert.equal(f.get('monitors').children.length, 3);
+});
+
+test('one invalid draft blocks the whole batch; failed saves and refresh retain every independent draft', async () => {
+  const f = await ui({
+    adding: true,
+    devices: [inventoryDevice('a'), inventoryDevice('b')],
+  });
+  f.choose('manual');
+  f.select('a', 'b');
+  f.field('expected', 'a').value = '9';
+  f.field('timeout', 'b').value = '1';
+  await f.submit();
+  assert.equal(f.puts.length, 0);
+  assert.equal(f.field('timeout', 'b').focused, true);
+  f.field('timeout', 'b').value = '20';
+  f.fail();
+  await f.submit();
+  assert.equal(f.saved().monitors.length, 0);
+  assert.equal(f.get('save-details').hidden, false);
+  await f.get('refresh').onclick!();
+  assert.equal(f.field('expected', 'a').value, '9');
+  assert.equal(f.field('timeout', 'b').value, '20');
+  f.fail(null);
+  await f.submit();
+  assert.equal(f.saved().monitors.length, 2);
+});
+
+test('timestamp settings remain per device through method changes and are not copied by timing shortcut', async () => {
+  const f = await ui({
+    adding: true,
+    devices: [
+      inventoryDevice('a'),
+      {
+        ...inventoryDevice('b'),
+        capabilities: [{ id: 'epoch', title: 'Receipt', type: 'number' }],
+      },
+    ],
+  });
+  f.choose('timestamp-capability');
+  f.select('a', 'b');
+  f.field('encoding', 'b').value = 'epoch-ms';
+  f.field('contract', 'b').value = 'Device b receipt timestamp';
+  findButton(f.get('similar-devices'), "Apply Device a's times to all 2")!
+    .onclick!();
+  f.choose('manual');
+  assert.equal(f.field('timestamp-fields', 'a').hidden, true);
+  f.choose('timestamp-capability');
+  assert.equal(f.field('timestamp-fields', 'a').hidden, false);
+  await f.submit();
+  assert.deepEqual(
+    f.saved().monitors.map((m) => m.strategy),
+    [
+      {
+        kind: 'timestamp-capability',
+        capabilities: ['timestamp'],
+        encoding: 'iso',
+      },
+      {
+        kind: 'timestamp-capability',
+        capabilities: ['epoch'],
+        encoding: 'epoch-ms',
+      },
+    ],
+  );
+  assert.equal(
+    f.saved().monitors[1].sourceContract,
+    'Device b receipt timestamp',
+  );
+});
+
+test('a source removed during inventory refresh blocks save and can still be deselected', async () => {
+  const devices = [inventoryDevice('a'), inventoryDevice('b')];
+  const f = await ui({ adding: true, devices });
+  f.choose('manual');
+  f.select('a', 'b');
+  devices.pop();
+  await f.get('refresh').onclick!();
+  await f.submit();
+  assert.equal(f.puts.length, 0);
+  assert.match(f.get('selection-error').textContent, /Device b is no longer/);
+  f.select('a');
+  await f.submit();
+  assert.deepEqual(
+    f.saved().monitors.map((m) => m.deviceId),
+    ['a'],
+  );
+});
 
 test('UI Edit loads full configuration including missing fields; Save preserves ID and avoids duplicates', async () => {
   const f = await ui();
@@ -224,9 +535,9 @@ test('UI Edit loads full configuration including missing fields; Save preserves 
   assert.equal(f.get('add').textContent, 'Save changes');
   assert.equal(f.get('source').disabled, true);
   assert.equal(f.get('device').value, 'd');
-  assert.equal(f.get('expected').value, '0.5');
-  assert.equal(f.get('timeout').value, '3');
-  assert.equal(f.get('encoding').value, 'iso');
+  assert.equal(f.field('expected').value, '0.5');
+  assert.equal(f.field('timeout').value, '3');
+  assert.equal(f.field('encoding').value, 'iso');
   assert.deepEqual(
     f
       .caps()
@@ -236,8 +547,8 @@ test('UI Edit loads full configuration including missing fields; Save preserves 
   );
   assert.equal(findButton(f.get('monitors'), 'Remove')!.disabled, true);
   assert.equal(findButton(f.get('monitors'), 'Disable')!.disabled, true);
-  f.get('timeout').value = '4';
-  f.get('enabled').checked = false;
+  f.field('timeout').value = '4';
+  f.field('enabled').checked = false;
   await f.submit();
   assert.equal(f.puts.length, 1);
   assert.equal(f.saved().monitors.length, 1);
@@ -251,7 +562,7 @@ test('UI Edit loads full configuration including missing fields; Save preserves 
 test('UI Cancel discards draft, restores initial config, and performs no write', async () => {
   const f = await ui();
   f.edit();
-  f.get('contract').value = 'Unsaved draft';
+  f.field('contract').value = 'Unsaved draft';
   f.choose('manual');
   f.get('cancel').onclick!();
   assert.equal(f.puts.length, 0);
@@ -259,21 +570,21 @@ test('UI Cancel discards draft, restores initial config, and performs no write',
   assert.equal(f.get('source').disabled, false);
   assert.equal(f.get('cancel').hidden, true);
   f.edit();
-  assert.equal(f.get('contract').value, 'Real simulation timestamp');
+  assert.equal(f.field('contract').value, 'Real simulation timestamp');
   assert.equal(f.get('strategy-timestamp-capability').checked, true);
 });
 
 test('UI refresh and rejected backend save preserve the edit draft, with error beside current action', async () => {
   const f = await ui();
   f.edit();
-  f.get('timeout').value = '9';
+  f.field('timeout').value = '9';
   await f.get('refresh').onclick!();
-  assert.equal(f.get('timeout').value, '9');
+  assert.equal(f.field('timeout').value, '9');
   assert.equal(f.get('add').textContent, 'Save changes');
   f.fail();
   await f.submit();
   assert.deepEqual(f.saved(), f.initial);
-  assert.equal(f.get('timeout').value, '9');
+  assert.equal(f.field('timeout').value, '9');
   assert.equal(f.get('add').disabled, false);
   assert.match(f.get('form-message').textContent, /could not be saved/);
   assert.equal(f.get('form-message').focused, true);
@@ -294,12 +605,13 @@ test('timestamp fields are conditional for all three choices', async () => {
 test('one compatible timestamp field is auto-selected; empty note saves successfully and monitor appears', async () => {
   const f = await ui({ adding: true });
   f.choose('timestamp-capability');
+  f.select('d');
   assert.equal(f.caps().length, 1);
   assert.equal(f.caps()[0].checked, true);
-  assert.match(f.text('capability-options'), /Last test heartbeat/);
-  f.get('expected').value = '0.5';
-  f.get('timeout').value = '3';
-  assert.equal(f.get('contract').value, '');
+  assert.match(text(f.card()), /Last test heartbeat/);
+  f.field('expected').value = '0.5';
+  f.field('timeout').value = '3';
+  assert.equal(f.field('contract').value, '');
   await f.submit();
   assert.equal(f.puts.length, 1);
   assert.equal(f.saved().monitors.length, 1);
@@ -318,6 +630,7 @@ test('multiple capabilities use independent checkboxes with clear names and pres
     ],
   });
   f.choose('timestamp-capability');
+  f.select('d');
   assert.equal(f.caps().length, 2);
   assert.ok(
     f.caps().every((input) => input.type === 'checkbox' && !input.checked),
@@ -337,24 +650,25 @@ test('multiple capabilities use independent checkboxes with clear names and pres
 test('live regression: no timestamp selected, then note filled still fails visibly; selecting it saves', async () => {
   const f = await ui({ adding: true });
   f.choose('timestamp-capability');
+  f.select('d');
   const input = f.caps()[0];
   input.checked = false;
   await f.submit();
   assert.equal(f.puts.length, 0);
   assert.match(
-    f.get('capabilities-error').textContent,
+    f.field('capabilities-error').textContent,
     /Select which timestamp/,
   );
-  assert.equal(f.get('capabilities-error').hidden, false);
+  assert.equal(f.field('capabilities-error').hidden, false);
   assert.equal(input.focused, true);
   assert.equal(input.scrolled, true);
   assert.match(f.get('form-message').textContent, /highlighted fields/);
-  f.get('contract').value = 'Now the technical note is filled';
+  f.field('contract').value = 'Now the technical note is filled';
   await f.submit();
   assert.equal(f.puts.length, 0);
   input.checked = true;
   input.onchange!();
-  assert.equal(f.get('capabilities-error').hidden, true);
+  assert.equal(f.field('capabilities-error').hidden, true);
   await f.submit();
   assert.equal(f.saved().monitors.length, 1);
 });
@@ -362,21 +676,22 @@ test('live regression: no timestamp selected, then note filled still fails visib
 test('timing order and backend minimum show inline errors, no writes, and clear when corrected', async () => {
   const f = await ui({ adding: true });
   f.choose('timestamp-capability');
-  f.get('expected').value = '5';
-  f.get('timeout').value = '3';
+  f.select('d');
+  f.field('expected').value = '5';
+  f.field('timeout').value = '3';
   await f.submit();
   assert.equal(f.puts.length, 0);
-  assert.match(f.get('timeout-error').textContent, /equal to or longer/);
-  assert.equal(f.get('timeout').focused, true);
-  f.get('expected').value = '0.5';
-  f.get('expected').oninput!();
-  assert.equal(f.get('timeout-error').hidden, true);
-  f.get('timeout').value = '1';
+  assert.match(f.field('timeout-error').textContent, /equal to or longer/);
+  assert.equal(f.field('timeout').focused, true);
+  f.field('expected').value = '0.5';
+  f.field('expected').oninput!();
+  assert.equal(f.field('timeout-error').hidden, true);
+  f.field('timeout').value = '1';
   await f.submit();
-  assert.match(f.get('timeout-error').textContent, /at least 2 minutes/);
+  assert.match(f.field('timeout-error').textContent, /at least 2 minutes/);
   assert.equal(f.puts.length, 0);
   f.choose('manual');
-  assert.equal(f.get('timeout-error').hidden, true);
+  assert.equal(f.field('timeout-error').hidden, true);
   await f.submit();
   assert.equal(f.puts.length, 1);
 });
@@ -384,13 +699,15 @@ test('timing order and backend minimum show inline errors, no writes, and clear 
 test('missing device and invalid numeric values cannot send config writes', async () => {
   const f = await ui({ adding: true, missingDevice: true });
   await f.submit();
-  assert.match(f.get('device-error').textContent, /Select a device/);
+  assert.match(f.get('selection-error').textContent, /Select a device/);
   assert.equal(f.puts.length, 0);
   const g = await ui({ adding: true });
+  g.choose('manual');
+  g.select('d');
   for (const value of ['', '0', '-1', 'Infinity', '525601', '0.000001']) {
-    g.get('expected').value = value;
+    g.field('expected').value = value;
     await g.submit();
-    assert.match(g.get('expected-error').textContent, /greater than zero/);
+    assert.match(g.field('expected-error').textContent, /greater than zero/);
   }
   assert.equal(g.puts.length, 0);
 });
@@ -409,7 +726,7 @@ test('serialized backend Zod error is translated and focuses the relevant field'
   });
   await f.submit();
   assert.match(
-    f.get('capabilities-error').textContent,
+    f.field('capabilities-error').textContent,
     /Select which timestamp/,
   );
   assert.equal(f.caps()[0].focused, true);
@@ -419,6 +736,8 @@ test('serialized backend Zod error is translated and focuses the relevant field'
 
 test('successful config write remains visible when status refresh fails', async () => {
   const f = await ui({ adding: true });
+  f.choose('manual');
+  f.select('d');
   f.statusFail();
   await f.submit();
   assert.equal(f.saved().monitors.length, 1);
@@ -467,16 +786,18 @@ for (const minutes of [0.5, 1.5])
   test(`${minutes} minute inputs save as exact milliseconds with existing strategy limits`, async () => {
     const f = await ui({ adding: true });
     f.choose('manual');
-    f.get('expected').value = String(minutes);
-    f.get('timeout').value = String(minutes);
+    f.select('d');
+    f.field('expected').value = String(minutes);
+    f.field('timeout').value = String(minutes);
     await f.submit();
     assert.equal(f.puts.length, 1);
     assert.equal(f.saved().monitors[0].expectedIntervalMs, minutes * 60000);
     assert.equal(f.saved().monitors[0].staleTimeoutMs, minutes * 60000);
     const observed = await ui({ adding: true });
     observed.choose('timestamp-capability');
-    observed.get('expected').value = String(minutes);
-    observed.get('timeout').value = '2';
+    observed.select('d');
+    observed.field('expected').value = String(minutes);
+    observed.field('timeout').value = '2';
     await observed.submit();
     assert.equal(observed.puts.length, 1);
     assert.equal(

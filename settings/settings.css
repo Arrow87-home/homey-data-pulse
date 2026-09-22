@@ -83,6 +83,21 @@ section {
 .monitor-list .card {
   margin: 0;
 }
+.picker,
+.timing-shortcut {
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.picker-options {
+  max-height: 320px;
+  overflow-y: auto;
+}
+#monitor-summary button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .monitor-heading h3 {
   margin: 0;
   font-size: 1.1rem;

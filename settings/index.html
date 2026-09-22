@@ -29,15 +29,20 @@
         <section id="help-quick-start" aria-labelledby="help-quick-start-title">
           <h3 id="help-quick-start-title">Quick start</h3>
           <ol>
-            <li>Choose an integration.</li>
-            <li>Choose the device you want to monitor.</li>
             <li>
               Choose how freshness should be checked, using the guidance below.
             </li>
-            <li>Enter how often updates are normally expected.</li>
             <li>
-              Choose how long to wait without a valid update before considering
-              the source stale.
+              Open Select devices, choose one or more sources, then confirm with
+              Use selection.
+            </li>
+            <li>
+              For each device, enter how often updates are normally expected.
+            </li>
+            <li>
+              Choose how long each device may go without a valid update before
+              it is considered stale. For devices with the same app and driver,
+              you can copy times and then adjust individual exceptions.
             </li>
             <li>
               Select Add monitor. Any fields that need attention will be
@@ -264,6 +269,11 @@
         <p id="monitors-empty">
           No monitors yet. Add a source below to get started.
         </p>
+        <div
+          id="monitor-summary"
+          class="actions"
+          aria-label="Filter monitors by method"
+        ></div>
         <ul id="monitors" class="monitor-list"></ul>
       </section>
       <section class="card" aria-labelledby="form-title">
@@ -271,28 +281,12 @@
         <form id="monitor-form" novalidate>
           <fieldset id="draft-fields" class="form-fields">
             <legend class="sr-only">Monitor configuration</legend>
-            <div class="field">
-              <label for="source">1. Integration</label
-              ><select id="source" aria-describedby="source-error"></select>
-              <p class="field-error" id="source-error" hidden></p>
-            </div>
-            <div class="field">
-              <label for="device">2. Device</label
-              ><select
-                id="device"
-                aria-describedby="device-help device-error"
-              ></select
-              ><small id="device-help"
-                >Choose the device whose freshness you want to monitor.</small
-              >
-              <p class="field-error" id="device-error" hidden></p>
-            </div>
             <fieldset
               id="strategy"
               class="field"
               aria-describedby="strategy-error"
             >
-              <legend>3. How should freshness be checked?</legend>
+              <legend>1. How should freshness be checked?</legend>
               <label class="choice"
                 ><input
                   id="strategy-device-last-seen"
@@ -328,7 +322,6 @@
                   type="radio"
                   name="strategy"
                   value="manual"
-                  checked
                 /><span
                   ><strong>Explicit heartbeat</strong
                   ><small
@@ -339,105 +332,166 @@
               >
               <p class="field-error" id="strategy-error" hidden></p>
             </fieldset>
-            <div id="timestamp-fields" hidden>
-              <fieldset
-                id="capabilities"
-                class="field"
-                tabindex="-1"
-                aria-describedby="capabilities-help capabilities-error"
-              >
-                <legend>Which field contains the delivery timestamp?</legend>
-                <small id="capabilities-help"
-                  >Choose a timestamp, not a measurement. If you select several
-                  fields, a new time in any one counts as an update. Check what
-                  the source actually reports.</small
-                >
-                <div id="capability-options"></div>
-                <small id="capabilities-empty" hidden
-                  >No timestamp-compatible fields are currently listed for this
-                  device. Refresh the inventory or choose another freshness
-                  check.</small
-                >
-                <p class="field-error" id="capabilities-error" hidden></p>
-              </fieldset>
+            <div id="setup-fields">
               <div class="field">
-                <label for="encoding">Timestamp format</label
-                ><select
-                  id="encoding"
-                  aria-describedby="encoding-help encoding-error"
+                <h3>2. Select devices</h3>
+                <button
+                  id="select-devices"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="device-picker"
+                  disabled
                 >
-                  <option value="iso">
-                    Date and time (ISO, with timezone)
-                  </option>
-                  <option value="epoch-seconds">Unix time in seconds</option>
-                  <option value="epoch-ms">
-                    Unix time in milliseconds
-                  </option></select
-                ><small id="encoding-help"
-                  >Match the format used by the source. The local test source
-                  uses ISO.</small
-                >
-                <p class="field-error" id="encoding-error" hidden></p>
+                  Select devices
+                </button>
+                <p id="selection-summary" class="muted">
+                  Choose a monitoring method first.
+                </p>
+                <p id="selection-error" class="field-error" hidden></p>
+              </div>
+              <fieldset id="device-picker" class="picker" hidden>
+                <legend>Select devices</legend>
+                <p>
+                  Choose sources for this method. Devices that already have a
+                  monitor remain individually editable above.
+                </p>
+                <div id="picker-options" class="picker-options"></div>
+                <div class="actions">
+                  <button id="confirm-devices" type="button">
+                    Use selection
+                  </button>
+                  <button id="cancel-devices" type="button">
+                    Cancel selection
+                  </button>
+                </div>
+              </fieldset>
+              <div id="setup-timing" hidden>
+                <h3>3. Configure each device</h3>
+                <p class="muted">
+                  Times are in minutes (60 = 1 hour). Each device becomes a
+                  separate monitor.
+                </p>
+                <div id="similar-devices"></div>
+                <div id="selected-devices" class="monitor-list"></div>
               </div>
             </div>
-            <fieldset class="field">
-              <legend>4. Timing</legend>
-              <div class="timing-grid">
-                <div>
-                  <label for="expected"
-                    >Expected update interval (minutes)</label
-                  ><input
-                    id="expected"
-                    type="number"
-                    step="0.5"
-                    value="5"
-                    inputmode="decimal"
-                    aria-describedby="expected-help expected-error"
-                  /><small id="expected-help"
-                    >How often should this source normally report activity or
-                    data?</small
-                  >
-                  <p class="field-error" id="expected-error" hidden></p>
-                </div>
-                <div>
-                  <label for="timeout">Consider stale after (minutes)</label
-                  ><input
-                    id="timeout"
-                    type="number"
-                    step="0.5"
-                    value="15"
-                    inputmode="decimal"
-                    aria-describedby="timeout-help timeout-error"
-                  /><small id="timeout-help"
-                    >Alert when no valid update has been seen for this long.
-                    Activity and timestamp checks require at least 2
-                    minutes.</small
-                  >
-                  <p class="field-error" id="timeout-error" hidden></p>
-                </div>
-              </div>
-            </fieldset>
-            <details id="advanced">
-              <summary>5. Advanced (optional)</summary>
+            <div id="edit-fields" hidden>
               <div class="field">
-                <label for="contract">Technical note (optional)</label
-                ><textarea
-                  id="contract"
-                  maxlength="2000"
-                  aria-describedby="contract-help contract-error"
-                ></textarea
-                ><small id="contract-help"
-                  >Optional note about why this signal provides reliable
-                  evidence of activity or delivery. Editing this note does not
-                  restart monitoring.</small
-                >
-                <p class="field-error" id="contract-error" hidden></p>
+                <label for="source">Integration</label
+                ><select id="source" aria-describedby="source-error"></select>
+                <p class="field-error" id="source-error" hidden></p>
               </div>
-            </details>
-            <label class="enabled"
-              ><input type="checkbox" id="enabled" checked /> Monitor
-              enabled</label
-            >
+              <div class="field">
+                <label for="device">Device</label
+                ><select
+                  id="device"
+                  aria-describedby="device-help device-error"
+                ></select
+                ><small id="device-help"
+                  >Choose the device whose freshness you want to monitor.</small
+                >
+                <p class="field-error" id="device-error" hidden></p>
+              </div>
+              <div id="timestamp-fields" hidden>
+                <fieldset
+                  id="capabilities"
+                  class="field"
+                  tabindex="-1"
+                  aria-describedby="capabilities-help capabilities-error"
+                >
+                  <legend>Which field contains the delivery timestamp?</legend>
+                  <small id="capabilities-help"
+                    >Choose a timestamp, not a measurement. If you select
+                    several fields, a new time in any one counts as an update.
+                    Check what the source actually reports.</small
+                  >
+                  <div id="capability-options"></div>
+                  <small id="capabilities-empty" hidden
+                    >No timestamp-compatible fields are currently listed for
+                    this device. Refresh the inventory or choose another
+                    freshness check.</small
+                  >
+                  <p class="field-error" id="capabilities-error" hidden></p>
+                </fieldset>
+                <div class="field">
+                  <label for="encoding">Timestamp format</label
+                  ><select
+                    id="encoding"
+                    aria-describedby="encoding-help encoding-error"
+                  >
+                    <option value="iso">
+                      Date and time (ISO, with timezone)
+                    </option>
+                    <option value="epoch-seconds">Unix time in seconds</option>
+                    <option value="epoch-ms">
+                      Unix time in milliseconds
+                    </option></select
+                  ><small id="encoding-help"
+                    >Match the format used by the source. The local test source
+                    uses ISO.</small
+                  >
+                  <p class="field-error" id="encoding-error" hidden></p>
+                </div>
+              </div>
+              <fieldset class="field">
+                <legend>Timing</legend>
+                <div class="timing-grid">
+                  <div>
+                    <label for="expected"
+                      >Expected update interval (minutes)</label
+                    ><input
+                      id="expected"
+                      type="number"
+                      step="0.5"
+                      value="5"
+                      inputmode="decimal"
+                      aria-describedby="expected-help expected-error"
+                    /><small id="expected-help"
+                      >How often should this source normally report activity or
+                      data?</small
+                    >
+                    <p class="field-error" id="expected-error" hidden></p>
+                  </div>
+                  <div>
+                    <label for="timeout">Consider stale after (minutes)</label
+                    ><input
+                      id="timeout"
+                      type="number"
+                      step="0.5"
+                      value="15"
+                      inputmode="decimal"
+                      aria-describedby="timeout-help timeout-error"
+                    /><small id="timeout-help"
+                      >Alert when no valid update has been seen for this long.
+                      Activity and timestamp checks require at least 2
+                      minutes.</small
+                    >
+                    <p class="field-error" id="timeout-error" hidden></p>
+                  </div>
+                </div>
+              </fieldset>
+              <details id="advanced">
+                <summary>Advanced (optional)</summary>
+                <div class="field">
+                  <label for="contract">Technical note (optional)</label
+                  ><textarea
+                    id="contract"
+                    maxlength="2000"
+                    aria-describedby="contract-help contract-error"
+                  ></textarea
+                  ><small id="contract-help"
+                    >Optional note about why this signal provides reliable
+                    evidence of activity or delivery. Editing this note does not
+                    restart monitoring.</small
+                  >
+                  <p class="field-error" id="contract-error" hidden></p>
+                </div>
+              </details>
+              <label class="enabled"
+                ><input type="checkbox" id="enabled" checked /> Monitor
+                enabled</label
+              >
+            </div>
           </fieldset>
           <p
             id="form-message"
