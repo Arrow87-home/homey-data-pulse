@@ -10,6 +10,7 @@ let pickerSelection = new Set();
 let monitorFilter = null;
 let draftSequence = 0;
 let errors = {};
+let sharedErrors = {};
 let latestStatus = { monitors: [], integrations: [] };
 const kinds = ['device-last-seen', 'timestamp-capability', 'manual'];
 const fields = [
@@ -22,28 +23,28 @@ const fields = [
   'timeout',
   'contract',
 ];
-// User-facing dynamic copy is centralized so it can move to Homey translations later.
-const copy = {
-  methods: {
-    'device-last-seen': 'Device activity',
-    'timestamp-capability': 'Delivery timestamp',
-    manual: 'Explicit heartbeat',
-  },
-  selectSource: 'Select an integration first.',
-  selectDevice:
-    'Select a device first. If it is missing, refresh the inventory.',
-  selectCapability:
-    'Select which timestamp indicates that new data has been received.',
-  timingOrder:
-    'Consider stale after must be equal to or longer than the expected update interval.',
-  observedMinimum:
-    'Activity and timestamp checks require a stale timeout of at least 2 minutes.',
-  invalidTiming:
-    'Enter a duration greater than zero, up to 525600 minutes (whole milliseconds).',
-  failed: 'The monitor could not be saved. Check the highlighted fields.',
-  retry:
-    'The monitor could not be saved. Try again; your changes are still here.',
-};
+// Homey's standard locale lookup keeps setup copy in /locales, including errors.
+const t = (key, tokens) => homey.__(`settings.${key}`, tokens);
+let copy;
+function localizeSetup() {
+  copy = Object.fromEntries(
+    [
+      'selectSource',
+      'selectDevice',
+      'selectCapability',
+      'timingOrder',
+      'observedMinimum',
+      'invalidTiming',
+      'failed',
+      'retry',
+    ].map((key) => [key, t(key)]),
+  );
+  copy.methods = Object.fromEntries(
+    kinds.map((key) => [key, t(`methods.${key}`)]),
+  );
+  for (const element of document.querySelectorAll('[data-i18n]'))
+    element.textContent = homey.__(element.getAttribute('data-i18n'));
+}
 const el = (id) => document.getElementById(id);
 const api = (method, path, body) =>
   new Promise((resolve, reject) =>
@@ -52,9 +53,7 @@ const api = (method, path, body) =>
     ),
   );
 const errorText = (error) =>
-  typeof error === 'string'
-    ? error
-    : (error?.message ?? 'An unexpected error occurred.');
+  typeof error === 'string' ? error : (error?.message ?? t('unexpected'));
 function announce(id, text, error = false) {
   el(id).textContent = text;
   el(id).className = error ? 'action-message error' : 'action-message';
@@ -125,7 +124,7 @@ function timestampVisibility() {
 
 function sources() {
   el('source').replaceChildren(
-    option('', 'Choose an integration'),
+    option('', t('chooseSource')),
     ...inventory.map((g) => option(g.sourceAppId, g.sourceAppName)),
   );
   if (inventory.length === 1) el('source').value = inventory[0].sourceAppId;
@@ -134,7 +133,7 @@ function sources() {
 function devices() {
   const group = inventory.find((g) => g.sourceAppId === el('source').value);
   el('device').replaceChildren(
-    option('', 'Choose a device'),
+    option('', t('chooseDevice')),
     ...(group?.devices ?? []).map((d) => option(d.deviceId, d.deviceName)),
   );
   if (group?.devices.length === 1)
@@ -171,10 +170,7 @@ function capabilities(saved) {
         node('strong', capability.title),
         node('small', capability.id, 'capability-id'),
       );
-      if (capability.missing)
-        text.append(
-          node('small', 'Saved field; not currently in the inventory.'),
-        );
+      if (capability.missing) text.append(node('small', t('missingField')));
       label.append(input, text);
       capabilityChoices.push(input);
       return label;
@@ -184,27 +180,29 @@ function capabilities(saved) {
 }
 function formMode() {
   const editing = editingId !== null;
-  el('form-title').textContent = editing ? 'Edit monitor' : 'Add monitor';
-  el('add').textContent = saving
-    ? 'Saving…'
-    : editing
-      ? 'Save changes'
-      : 'Add monitor';
-  el('cancel').hidden = !editing && !kind();
+  const picking = !el('device-picker').hidden;
+  el('form-title').textContent = t(editing ? 'editMonitor' : 'newMonitors');
+  el('add').textContent = t(
+    saving ? 'saving' : editing ? 'saveChanges' : 'addMonitors',
+  );
+  el('cancel').hidden = !editing;
   el('edit-fields').hidden = !editing;
   el('setup-fields').hidden = editing;
   el('select-devices').disabled = saving || !config || !kind();
-  if (!editing)
-    el('add').textContent = saving
-      ? 'Saving…'
-      : `Add ${drafts.size || ''}${drafts.size ? ' ' : ''}monitor${drafts.size === 1 || !drafts.size ? '' : 's'}`;
+  el('select-devices').textContent = t(
+    drafts.size ? 'changeSelection' : 'selectDevices',
+  );
   el('source').disabled = el('device').disabled = editing;
   el('draft-fields').disabled = saving;
+  el('form-actions').hidden = picking;
+  el('selection-controls').hidden = picking;
+  el('setup-timing').hidden = !drafts.size || picking;
   el('add').disabled =
     el('cancel').disabled =
     el('refresh').disabled =
       saving || !config;
 }
+
 function resetForm() {
   editingId = null;
   errors = {};
@@ -213,6 +211,11 @@ function resetForm() {
   el('advanced').open = false;
   el('enabled').checked = true;
   drafts = new Map();
+  sharedErrors = {};
+  renderSharedErrors();
+  el('setup-expected').value = '5';
+  el('setup-timeout').value = '15';
+  el('device-settings').open = false;
   closePicker();
   setKind(undefined);
   renderSetup();
@@ -260,7 +263,7 @@ function validate() {
     editingId === null &&
     config?.monitors.some((m) => m.deviceId === el('device').value)
   )
-    issues.device = 'This device already has a monitor. Use Edit on its card.';
+    issues.device = t('duplicate');
   return {
     ...issues,
     ...validateValues({
@@ -275,14 +278,14 @@ function validate() {
 }
 function validateValues(values) {
   const issues = {};
-  if (!values.kind) issues.strategy = 'Choose how freshness should be checked.';
+  if (!values.kind) issues.strategy = t('chooseMethod');
   if (values.kind === 'timestamp-capability') {
     if (!values.capabilities.length)
       issues.capabilities = copy.selectCapability;
     else if (values.capabilities.length > 16)
-      issues.capabilities = 'Select no more than 16 timestamp fields.';
+      issues.capabilities = t('maxFields');
     if (!['iso', 'epoch-seconds', 'epoch-ms'].includes(values.encoding))
-      issues.encoding = 'Select the timestamp format used by the source.';
+      issues.encoding = t('chooseEncoding');
   }
   for (const field of ['expected', 'timeout']) {
     const milliseconds = Number(values[field]) * 60000;
@@ -301,8 +304,7 @@ function validateValues(values) {
     issues.timeout = copy.timingOrder;
   if (!issues.timeout && values.kind !== 'manual' && Number(values.timeout) < 2)
     issues.timeout = copy.observedMinimum;
-  if (values.contract.length > 2000)
-    issues.contract = 'Keep the technical note within 2000 characters.';
+  if (values.contract.length > 2000) issues.contract = t('noteLimit');
   return issues;
 }
 function renderErrors() {
@@ -374,20 +376,17 @@ function saveError(error, next) {
           expected: copy.invalidTiming,
           timeout:
             issue.code === 'custom' ? copy.timingOrder : copy.invalidTiming,
-          contract: 'Keep the optional note within 2000 characters.',
+          contract: t('optionalNoteLimit'),
           source: copy.selectSource,
           device: copy.selectDevice,
-          strategy: 'Choose a supported freshness check.',
-          encoding: 'Select a supported timestamp format.',
+          strategy: t('supportedMethod'),
+          encoding: t('supportedEncoding'),
         }[field];
     }
   if (raw.includes('120000')) errors.timeout = copy.observedMinimum;
   if (/Duplicate (deviceId|id)/.test(raw))
-    errors.device =
-      'This device already has a monitor. Refresh and edit the existing monitor.';
-  if (/identity mismatch/.test(raw))
-    errors.device =
-      'This device no longer belongs to the selected integration. Refresh and check the device.';
+    errors.device = t('duplicateRefresh');
+  if (/identity mismatch/.test(raw)) errors.device = t('identityChanged');
   renderErrors();
   announce(
     'form-message',
@@ -435,11 +434,7 @@ async function submit(event) {
   const original =
     editingId === null ? null : config.monitors.find((m) => m.id === editingId);
   if (editingId !== null && !original) {
-    announce(
-      'form-message',
-      'This monitor no longer exists. Cancel and refresh before trying again.',
-      true,
-    );
+    announce('form-message', t('monitorMissing'), true);
     focusError();
     return;
   }
@@ -473,15 +468,10 @@ async function submit(event) {
       ? config.monitors.map((m) => (m.id === original.id ? monitor : m))
       : [...config.monitors, monitor],
   };
-  announce('form-message', 'Saving…');
+  announce('form-message', t('saving'));
   try {
     const refreshed = await writeConfig(next, true);
-    announce(
-      'form-message',
-      refreshed
-        ? 'Monitor saved.'
-        : 'Monitor saved. Status could not be refreshed; use Refresh status to try again.',
-    );
+    announce('form-message', refreshed ? t('saved') : t('savedRefreshFailed'));
   } catch (error) {
     saveError(error, next);
   }
@@ -494,6 +484,7 @@ function inventoryDevices() {
 function closePicker() {
   el('device-picker').hidden = true;
   el('select-devices').setAttribute('aria-expanded', 'false');
+  formMode();
 }
 function openPicker() {
   if (saving || !config || !kind()) return;
@@ -501,15 +492,17 @@ function openPicker() {
   renderPicker();
   el('device-picker').hidden = false;
   el('select-devices').setAttribute('aria-expanded', 'true');
-  el('confirm-devices').focus();
+  formMode();
+  const first = el('picker-options').querySelector('input:not(:disabled)');
+  (first ?? el('confirm-devices')).focus();
 }
 function renderPicker() {
   const groups = inventory
     .map((group) => {
-      const section = node('fieldset', '', 'field');
-      section.append(node('legend', group.sourceAppName));
+      const section = node('div', '', 'picker-group');
+      section.append(node('h4', group.sourceAppName));
       for (const device of group.devices) {
-        const label = node('label', '', 'choice');
+        const label = node('label', '', 'selection-tile');
         const input = node('input');
         input.type = 'checkbox';
         input.value = device.deviceId;
@@ -521,13 +514,12 @@ function renderPicker() {
           if (input.checked) pickerSelection.add(device.deviceId);
           else pickerSelection.delete(device.deviceId);
         };
-        label.append(
-          input,
-          node(
-            'span',
-            `${device.deviceName}${device.zone ? ` · ${device.zone}` : ''}${input.disabled ? ' (already monitored)' : ''}`,
-          ),
+        const description = node('span');
+        description.append(
+          node('strong', device.deviceName),
+          node('small', input.disabled ? t('alreadyMonitored') : device.zone),
         );
+        label.append(input, description);
         section.append(label);
       }
       return section;
@@ -535,16 +527,11 @@ function renderPicker() {
     .filter((section) => section.children.length > 1);
   el('picker-options').replaceChildren(...groups);
   if (!groups.length)
-    el('picker-options').append(
-      node(
-        'p',
-        'No devices are currently listed. Refresh the inventory to try again.',
-      ),
-    );
+    el('picker-options').append(node('p', t('emptyInventory')));
   // Retain a way to deselect a source that disappeared while setup was open.
   for (const [id, draft] of drafts) {
     if (inventoryDevices().some((d) => d.deviceId === id)) continue;
-    const label = node('label', '', 'choice');
+    const label = node('label', '', 'selection-tile');
     const input = node('input');
     input.type = 'checkbox';
     input.value = id;
@@ -553,7 +540,7 @@ function renderPicker() {
       input.checked ? pickerSelection.add(id) : pickerSelection.delete(id);
     label.append(
       input,
-      node('span', `${draft.device.deviceName} (not currently listed)`),
+      node('span', t('missingSelection', { name: draft.device.deviceName })),
     );
     el('picker-options').append(label);
   }
@@ -582,12 +569,13 @@ function createDraft(device) {
     errors: {},
     messages: {},
     capabilityInputs: [],
-    card: node('fieldset', '', 'card'),
+    override: false,
+    card: node('div', '', 'device-options'),
   };
   const prefix = `setup-${++draftSequence}`;
   draft.card.setAttribute('data-device-id', device.deviceId);
   draft.card.append(
-    node('legend', device.deviceName),
+    node('h4', device.deviceName),
     node(
       'p',
       `${device.sourceAppName}${device.zone ? ` · ${device.zone}` : ''}`,
@@ -623,7 +611,7 @@ function createDraft(device) {
   choices.id = `${prefix}-capabilities`;
   choices.setAttribute('tabindex', '-1');
   choices.append(
-    node('legend', 'Which field contains the delivery timestamp?'),
+    node('legend', t('timestampField')),
     node('small', el('capabilities-help').textContent),
   );
   const compatible = device.capabilities.filter(
@@ -646,52 +634,58 @@ function createDraft(device) {
     choices.append(label);
     draft.capabilityInputs.push(input);
   }
-  if (!compatible.length)
-    choices.append(
-      node(
-        'small',
-        'No timestamp-compatible fields are currently listed for this device.',
-      ),
-    );
+  if (!compatible.length) choices.append(node('small', t('noTimestampFields')));
   const message = node('p', '', 'field-error');
   message.id = `${choices.id}-error`;
   message.hidden = true;
   choices.append(message);
   draft.messages.capabilities = message;
   draft.controls.capabilities = choices;
-  const encoding = field('encoding', 'Timestamp format', 'select', 'iso');
+  const encoding = field('encoding', t('encoding'), 'select', 'iso');
   draft.controls.encoding.append(
-    option('iso', 'Date and time (ISO, with timezone)'),
-    option('epoch-seconds', 'Unix time in seconds'),
-    option('epoch-ms', 'Unix time in milliseconds'),
+    option('iso', t('iso')),
+    option('epoch-seconds', t('seconds')),
+    option('epoch-ms', t('milliseconds')),
   );
   encoding.append(node('small', el('encoding-help').textContent));
   draft.timestamp.append(choices, encoding);
   draft.card.append(draft.timestamp);
   const timing = node('div', '', 'timing-grid');
+  draft.timing = timing;
+  timing.hidden = true;
+  draft.overrideButton = node('button', t('customTiming'));
+  draft.overrideButton.type = 'button';
+  draft.overrideButton.id = `${prefix}-override`;
+  draft.overrideButton.setAttribute('aria-pressed', 'false');
+  draft.overrideButton.onclick = () => {
+    if (saving) return;
+    if (!draft.override)
+      for (const key of ['expected', 'timeout'])
+        draft.controls[key].value = el(`setup-${key}`).value;
+    draft.override = !draft.override;
+    syncDraftTiming(draft);
+    correctDraftErrors(draft);
+    correctSharedErrors();
+  };
+  draft.card.append(draft.overrideButton);
   timing.append(
-    field(
-      'expected',
-      'Expected update interval (minutes)',
-      'input',
-      '5',
-      'number',
-    ),
-    field('timeout', 'Consider stale after (minutes)', 'input', '15', 'number'),
+    field('expected', t('expectedMinutes'), 'input', '5', 'number'),
+    field('timeout', t('timeoutMinutes'), 'input', '15', 'number'),
   );
-  draft.card.append(timing, node('small', el('timeout-help').textContent));
+  draft.card.append(timing);
   draft.advanced = node('details');
   draft.advanced.append(
-    node('summary', 'Advanced (optional)'),
-    field('contract', 'Technical note (optional)', 'textarea', ''),
+    node('summary', t('advanced')),
+    field('contract', t('note'), 'textarea', ''),
   );
   draft.card.append(draft.advanced);
   const enabled = node('label', '', 'enabled');
   draft.controls.enabled = node('input');
   draft.controls.enabled.type = 'checkbox';
   draft.controls.enabled.checked = true;
-  enabled.append(draft.controls.enabled, node('span', ' Monitor enabled'));
-  draft.card.append(enabled);
+  enabled.append(draft.controls.enabled, node('span', t('enabled')));
+  draft.advanced.append(enabled);
+  syncDraftTiming(draft);
   return draft;
 }
 function draftValues(draft) {
@@ -701,11 +695,14 @@ function draftValues(draft) {
       .filter((i) => i.checked)
       .map((i) => i.value),
     ...Object.fromEntries(
-      ['encoding', 'expected', 'timeout', 'contract'].map((key) => [
-        key,
-        draft.controls[key].value,
-      ]),
+      ['encoding', 'contract'].map((key) => [key, draft.controls[key].value]),
     ),
+    expected: draft.override
+      ? draft.controls.expected.value
+      : el('setup-expected').value,
+    timeout: draft.override
+      ? draft.controls.timeout.value
+      : el('setup-timeout').value,
   };
 }
 function renderDraftErrors(draft) {
@@ -726,101 +723,111 @@ function correctDraftErrors(draft) {
   }
   renderDraftErrors(draft);
 }
+function syncDraftTiming(draft) {
+  draft.timing.hidden = !draft.override;
+  draft.overrideButton.textContent = t(
+    draft.override ? 'useSharedTiming' : 'customTiming',
+  );
+  draft.overrideButton.setAttribute('aria-pressed', String(draft.override));
+  for (const key of ['expected', 'timeout']) {
+    if (!draft.override) draft.controls[key].value = el(`setup-${key}`).value;
+    draft.controls[key].disabled = !draft.override;
+  }
+}
+function renderSharedErrors() {
+  for (const key of ['expected', 'timeout']) {
+    el(`setup-${key}-error`).textContent = sharedErrors[key] ?? '';
+    el(`setup-${key}-error`).hidden = !sharedErrors[key];
+    el(`setup-${key}`).setAttribute(
+      'aria-invalid',
+      String(!!sharedErrors[key]),
+    );
+  }
+}
+function correctSharedErrors() {
+  const inherited = [...drafts.values()].find((d) => !d.override);
+  const corrected = inherited ? validateValues(draftValues(inherited)) : {};
+  for (const key of Object.keys(sharedErrors)) {
+    if (corrected[key]) sharedErrors[key] = corrected[key];
+    else delete sharedErrors[key];
+  }
+  renderSharedErrors();
+}
 function renderSetup() {
   el('selection-summary').textContent = !kind()
-    ? 'Choose a monitoring method first.'
-    : `${drafts.size} device${drafts.size === 1 ? '' : 's'} selected`;
+    ? t('chooseMethodFirst')
+    : drafts.size
+      ? t('selectionSummary', {
+          count: drafts.size,
+          names: [...drafts.values()]
+            .map((d) => d.device.deviceName)
+            .join(', '),
+        })
+      : t('noSelection');
   el('selection-error').hidden = true;
   el('setup-timing').hidden = drafts.size === 0;
+  el('timestamp-setup-hint').hidden = kind() !== 'timestamp-capability';
   for (const draft of drafts.values()) {
     draft.timestamp.hidden = kind() !== 'timestamp-capability';
+    syncDraftTiming(draft);
     correctDraftErrors(draft);
   }
+  correctSharedErrors();
   el('selected-devices').replaceChildren(
     ...[...drafts.values()].map((d) => d.card),
   );
-  const groups = new Map();
-  for (const device of inventoryDevices()) {
-    const draft = drafts.get(device.deviceId);
-    if (
-      !draft ||
-      !device.identityResolved ||
-      !device.driverId ||
-      device.sourceAppId !== draft.device.sourceAppId
-    )
-      continue;
-    const key = JSON.stringify([device.sourceAppId, device.driverId]);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(draft);
-  }
-  el('similar-devices').replaceChildren(
-    ...[...groups.values()]
-      .filter((group) => group.length > 1)
-      .map((group) => {
-        const section = node('div', '', 'timing-shortcut');
-        const first = group[0];
-        section.append(
-          node(
-            'strong',
-            `${group.length} similar devices selected · ${first.device.sourceAppName}`,
-          ),
-          node(
-            'p',
-            `Same app and driver. Set the times for ${first.device.deviceName} below, then copy them to this selection. Each device stays individually adjustable.`,
-          ),
-        );
-        const button = node(
-          'button',
-          `Apply ${first.device.deviceName}'s times to all ${group.length}`,
-        );
-        button.type = 'button';
-        const feedback = node('p');
-        feedback.setAttribute('role', 'status');
-        button.onclick = () => {
-          if (saving) return;
-          for (const draft of group) {
-            for (const key of ['expected', 'timeout'])
-              draft.controls[key].value = first.controls[key].value;
-            correctDraftErrors(draft);
-          }
-          feedback.textContent = `Times applied to ${group.length} devices. You can still adjust each device below.`;
-        };
-        section.append(button, feedback);
-        return section;
-      }),
-  );
 }
 async function submitSetup() {
-  errors = kind()
-    ? {}
-    : { strategy: 'Choose how freshness should be checked.' };
+  errors = kind() ? {} : { strategy: t('chooseMethod') };
   renderErrors();
   el('save-details').hidden = true;
-  let selectionError = drafts.size ? '' : 'Select a device before saving.';
-  if (!el('device-picker').hidden)
-    selectionError = 'Confirm or cancel the device selection before saving.';
+  let selectionError = drafts.size ? '' : t('selectBeforeSaving');
+  if (!el('device-picker').hidden) selectionError = t('confirmBeforeSaving');
   if (config.monitors.length + drafts.size > 500)
-    selectionError = 'You can configure up to 500 monitors.';
+    selectionError = t('maxMonitors');
   let firstInvalid;
+  sharedErrors = {};
   for (const [id, draft] of drafts) {
     const device = inventoryDevices().find(
       (d) => d.deviceId === id && d.sourceAppId === draft.device.sourceAppId,
     );
     if (!device)
-      selectionError = `${draft.device.deviceName} is no longer in the inventory. Deselect it or refresh before saving.`;
+      selectionError = t('missingDevice', { name: draft.device.deviceName });
     if (config.monitors.some((m) => m.deviceId === id || m.id === id))
-      selectionError = `${draft.device.deviceName} already has a monitor. Deselect it and use Edit.`;
+      selectionError = t('alreadyHasMonitor', {
+        name: draft.device.deviceName,
+      });
     draft.errors = validateValues(draftValues(draft));
+    if (!draft.override)
+      for (const key of ['expected', 'timeout']) {
+        if (draft.errors[key]) sharedErrors[key] = draft.errors[key];
+        delete draft.errors[key];
+      }
     renderDraftErrors(draft);
     if (!firstInvalid && Object.keys(draft.errors).length) firstInvalid = draft;
   }
   el('selection-error').textContent = selectionError;
   el('selection-error').hidden = !selectionError;
-  if (Object.keys(errors).length || selectionError || firstInvalid) {
+  renderSharedErrors();
+  if (
+    Object.keys(errors).length ||
+    selectionError ||
+    firstInvalid ||
+    Object.keys(sharedErrors).length
+  ) {
     announce('form-message', copy.failed, true);
     if (errors.strategy) focusError();
-    else if (selectionError) el('select-devices').focus();
-    else {
+    else if (selectionError)
+      (el('device-picker').hidden
+        ? el('select-devices')
+        : el('confirm-devices')
+      ).focus();
+    else if (Object.keys(sharedErrors).length) {
+      const target = el(`setup-${Object.keys(sharedErrors)[0]}`);
+      target.scrollIntoView({ block: 'center', behavior: 'auto' });
+      target.focus();
+    } else {
+      el('device-settings').open = true;
       const key = fields.find((key) => firstInvalid.errors[key]);
       if (key === 'contract') firstInvalid.advanced.open = true;
       const target =
@@ -866,7 +873,7 @@ async function submitSetup() {
     );
     announce(
       'form-message',
-      `${monitors.length === 1 ? 'Monitor saved.' : `${monitors.length} monitors saved.`}${refreshed ? '' : ' Status could not be refreshed; use Refresh status to try again.'}`,
+      `${monitors.length === 1 ? t('saved') : t('batchSaved', { count: monitors.length })}${refreshed ? '' : t('refreshSuffix')}`,
     );
   } catch (error) {
     announce('form-message', copy.retry, true);
@@ -887,7 +894,7 @@ function renderMonitorSummary() {
         : monitors.length;
       const button = node(
         'button',
-        `${method ? copy.methods[method] : 'All'} · ${count}`,
+        `${method ? copy.methods[method] : t('all')} · ${count}`,
       );
       button.type = 'button';
       button.setAttribute('aria-pressed', String(monitorFilter === method));
@@ -956,14 +963,14 @@ function renderMonitors() {
         const actions = node('div', '', 'actions');
         const feedback = node('p');
         feedback.setAttribute('role', 'status');
-        const edit = node('button', 'Edit');
+        const edit = node('button', t('edit'));
         edit.type = 'button';
         edit.disabled = saving;
         edit.onclick = () => editMonitor(monitor);
         actions.append(edit);
         for (const [label, action] of [
-          [monitor.enabled ? 'Disable' : 'Enable', 'toggle'],
-          ['Remove', 'remove'],
+          [monitor.enabled ? t('disable') : t('enable'), 'toggle'],
+          [t('remove'), 'remove'],
         ]) {
           const button = node(
             'button',
@@ -1106,6 +1113,7 @@ async function load() {
 }
 function onHomeyReady(Homey) {
   homey = Homey;
+  localizeSetup();
   homey.ready();
   formMode();
   el('monitor-form').onsubmit = submit;
@@ -1133,6 +1141,14 @@ function onHomeyReady(Homey) {
     el('select-devices').focus();
   };
   el('confirm-devices').onclick = confirmDevices;
+  for (const key of ['expected', 'timeout'])
+    el(`setup-${key}`).oninput = () => {
+      for (const draft of drafts.values()) {
+        syncDraftTiming(draft);
+        correctDraftErrors(draft);
+      }
+      correctSharedErrors();
+    };
   for (const id of ['encoding', 'expected', 'timeout', 'contract']) {
     el(id).oninput = correctErrors;
     el(id).onchange = correctErrors;
@@ -1141,17 +1157,17 @@ function onHomeyReady(Homey) {
     if (saving) return;
     resetForm();
     renderMonitors();
-    announce('form-message', 'Changes cancelled.');
+    announce('form-message', t('cancelled'));
   };
   el('refresh').onclick = async () => {
     if (saving) return;
     try {
       await load();
-      announce('message', 'Status refreshed.');
+      announce('message', t('refreshed'));
     } catch (error) {
       announce(
         'message',
-        `Could not refresh status: ${errorText(error)}`,
+        t('refreshFailed', { error: errorText(error) }),
         true,
       );
     }
@@ -1172,11 +1188,7 @@ function onHomeyReady(Homey) {
       }
     };
   load().catch((error) => {
-    announce(
-      'message',
-      `Could not load settings: ${errorText(error)}. Use Refresh status to retry.`,
-      true,
-    );
+    announce('message', t('loadFailed', { error: errorText(error) }), true);
     el('refresh').disabled = false;
   });
 }

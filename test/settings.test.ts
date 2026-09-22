@@ -32,6 +32,12 @@ class Element {
   append(...children: Element[]) {
     this.children.push(...children);
   }
+  getAttribute(key: string) {
+    return this.attributes.get(key);
+  }
+  querySelector() {
+    return descendants(this).find((e) => e.tag === 'input' && !e.disabled);
+  }
   setAttribute(key: string, value: string) {
     this.attributes.set(key, value);
   }
@@ -97,6 +103,7 @@ const inventoryDevice = (
 async function ui(
   options: {
     adding?: boolean;
+    language?: string;
     capabilities?: { id: string; title: string; type?: string }[];
     paired?: boolean;
     missingDevice?: boolean;
@@ -104,14 +111,18 @@ async function ui(
   } = {},
 ) {
   const elements = new Map<string, Element>();
+  const staticElements: Element[] = [];
   for (const match of readFileSync('settings/index.html', 'utf8').matchAll(
-    /<(\w+)[^>]*\bid="([^"]+)"[^>]*>/g,
+    /<(\w+)[^>]*>/g,
   )) {
     const item = new Element(match[1]);
-    item.id = match[2];
+    item.id = match[0].match(/\bid="([^"]+)"/)?.[1] ?? '';
     item.value = match[0].match(/\bvalue="([^"]*)"/)?.[1] ?? '';
     item.hidden = /\bhidden\b/.test(match[0]);
-    elements.set(item.id, item);
+    const translation = match[0].match(/data-i18n="([^"]+)"/)?.[1];
+    if (translation) item.setAttribute('data-i18n', translation);
+    staticElements.push(item);
+    if (item.id) elements.set(item.id, item);
   }
   const get = (id: string) => {
     const element =
@@ -140,12 +151,29 @@ async function ui(
     window: {},
     document: {
       getElementById: get,
+      querySelectorAll: () =>
+        staticElements.filter((e) => e.getAttribute('data-i18n')),
       createElement: (tag: string) => new Element(tag),
     },
   });
   vm.runInContext(readFileSync('settings/settings.js', 'utf8'), context);
   context.mockHomey = {
     ready() {},
+    __(key: string, tokens: Record<string, string | number> = {}) {
+      const locale = JSON.parse(
+        readFileSync(
+          `locales/${options.language === 'nl' ? 'nl' : 'en'}.json`,
+          'utf8',
+        ),
+      );
+      const value = key
+        .split('.')
+        .reduce((current, part) => current?.[part], locale);
+      assert.equal(typeof value, 'string', `Missing translation: ${key}`);
+      return value.replace(/__(\w+)__/g, (_: string, name: string) =>
+        String(tokens[name] ?? `__${name}__`),
+      );
+    },
     api(
       method: string,
       path: string,
@@ -252,7 +280,17 @@ async function ui(
   };
   const field = (key: string, id = 'd') => {
     if (!get('edit-fields').hidden) return get(key);
-    const result = descendants(card(id)).find((e) => e.id.endsWith(`-${key}`));
+    const controls = descendants(card(id));
+    if (
+      ['expected', 'timeout', 'expected-error', 'timeout-error'].includes(
+        key,
+      ) &&
+      controls
+        .find((e) => e.id.endsWith('-override'))
+        ?.getAttribute('aria-pressed') !== 'true'
+    )
+      return get(`setup-${key}`);
+    const result = controls.find((e) => e.id.endsWith(`-${key}`));
     assert.ok(result, `Missing setup field: ${key}`);
     return result;
   };
@@ -261,6 +299,14 @@ async function ui(
     field,
     select,
     card,
+    translations: () =>
+      staticElements
+        .filter((e) => e.getAttribute('data-i18n'))
+        .map((e) => e.textContent),
+    override: (id = 'd') => {
+      get('device-settings').open = true;
+      field('override', id).onclick!();
+    },
     puts,
     initial,
     actions,
@@ -305,65 +351,233 @@ test('setup starts with the method, then a temporary picker; one selected source
   assert.equal(f.get('selected-devices').children.length, 0);
 });
 
-test('same app and driver shortcut copies timing; individual overrides and other types stay independent', async () => {
-  const devices = [
-    inventoryDevice('a'),
-    inventoryDevice('b'),
-    inventoryDevice('c', 'weather'),
-  ];
+for (const language of ['en', 'nl'])
+  test(`${language}: setup labels, selection, validation and confirmation use Homey's locale`, async () => {
+    const f = await ui({ language, adding: true });
+    const dutch = language === 'nl';
+    assert.equal(
+      f.get('form-title').textContent,
+      dutch ? 'Nieuwe monitors' : 'New monitors',
+    );
+    assert.equal(
+      f.get('select-devices').textContent,
+      dutch ? 'Apparaten kiezen' : 'Select devices',
+    );
+    for (const label of dutch
+      ? [
+          'Controleer via',
+          'Apparaten',
+          'Apparaatactiviteit',
+          'Tijdstip van laatste update',
+          'Expliciete bevestiging',
+          'Instellingen per apparaat aanpassen',
+        ]
+      : [
+          'Check via',
+          'Devices',
+          'Device activity',
+          'Delivery timestamp',
+          'Explicit heartbeat',
+          'Adjust settings per device',
+        ])
+      assert.ok(f.translations().includes(label), label);
+    f.choose('device-last-seen');
+    f.get('select-devices').onclick!();
+    assert.equal(f.get('form-actions').hidden, true);
+    assert.equal(f.get('selection-controls').hidden, true);
+    assert.equal(f.get('cancel').hidden, true);
+    assert.equal(
+      f.get('confirm-devices').textContent,
+      dutch ? 'Selectie bevestigen' : 'Use selection',
+    );
+    f.get('cancel-devices').onclick!();
+    assert.equal(f.get('form-actions').hidden, false);
+    f.select('d');
+    assert.equal(f.get('device-picker').hidden, true);
+    assert.equal(f.get('device-settings').open, false);
+    assert.equal(
+      f.text('selection-summary'),
+      dutch ? '1 gekozen · Simulation' : '1 selected · Simulation',
+    );
+    assert.equal(
+      f.get('select-devices').textContent,
+      dutch ? 'Selectie wijzigen' : 'Change selection',
+    );
+    assert.equal(
+      f.get('add').textContent,
+      dutch ? 'Monitors toevoegen' : 'Add monitors',
+    );
+    f.get('setup-expected').value = '0.5';
+    f.get('setup-timeout').value = '1';
+    await f.submit();
+    assert.equal(f.puts.length, 0);
+    assert.match(
+      f.get('setup-timeout-error').textContent,
+      dutch ? /minimaal 2 minuten/ : /at least 2 minutes/,
+    );
+    assert.equal(f.get('setup-timeout').focused, true);
+    assert.equal(f.get('device-settings').open, false);
+    f.get('setup-timeout').value = '2';
+    await f.submit();
+    assert.equal(
+      f.get('form-message').textContent,
+      dutch ? 'Monitor opgeslagen.' : 'Monitor saved.',
+    );
+  });
+
+test('locale catalogs cover the same settings keys and unsupported locales fall back to English', async () => {
+  const en = JSON.parse(readFileSync('locales/en.json', 'utf8'));
+  const nl = JSON.parse(readFileSync('locales/nl.json', 'utf8'));
+  const flatten = (value: Record<string, unknown>, prefix = ''): string[] =>
+    Object.entries(value).flatMap(([key, item]) =>
+      typeof item === 'object'
+        ? flatten(item as Record<string, unknown>, `${prefix}${key}.`)
+        : (assert.equal(typeof item, 'string'),
+          assert.ok(item),
+          [`${prefix}${key}`]),
+    );
+  assert.deepEqual(flatten(en), flatten(nl));
+  const f = await ui({ adding: true, language: 'de' });
+  assert.equal(f.get('select-devices').textContent, 'Select devices');
+});
+
+test('method and device tiles retain native accessible selection semantics without visible native glyphs', async () => {
+  const html = readFileSync('settings/index.html', 'utf8');
+  const css = readFileSync('settings/settings.css', 'utf8');
+  assert.match(
+    html,
+    /class="method-choice"[^]*?<input[^]*?type="radio"[^]*?name="strategy"/,
+  );
+  assert.match(
+    css,
+    /\.method-choice input,\s*\.selection-tile input\s*\{[^}]*clip-path: inset\(50%\)/,
+  );
+  assert.match(css, /\.method-choice:has\(input:focus-visible\)/);
+  assert.match(css, /\.selection-tile:has\(input:focus-visible\)/);
+  const f = await ui({ adding: true });
+  f.choose('manual');
+  f.get('select-devices').onclick!();
+  const tile = descendants(f.get('picker-options')).find(
+    (e) => e.className === 'selection-tile',
+  )!;
+  assert.equal(tile.tag, 'label');
+  assert.equal(tile.children[0].type, 'checkbox');
+  assert.equal(tile.children[0].focused, true);
+  tile.children[0].checked = true;
+  tile.children[0].onchange!();
+  f.get('confirm-devices').onclick!();
+  await f.submit();
+  assert.equal(f.saved().monitors.length, 1);
+});
+
+test('Dutch picker marks existing monitors and optional fields stay translated', async () => {
+  const f = await ui({
+    language: 'nl',
+    devices: [inventoryDevice('d'), inventoryDevice('a')],
+  });
+  f.choose('timestamp-capability');
+  f.get('select-devices').onclick!();
+  assert.match(f.text('picker-options'), /Wordt al bewaakt/);
+  f.get('cancel-devices').onclick!();
+  f.select('a', 'd');
+  assert.equal(f.get('selected-devices').children.length, 1);
+  f.override('a');
+  const content = text(f.card('a'));
+  for (const phrase of [
+    'Welk veld bevat het tijdstip van de update?',
+    'Tijdstempelformaat',
+    'Verwacht update-interval',
+    'Meldtermijn',
+    'Notitie (optioneel)',
+    'Monitor ingeschakeld',
+  ])
+    assert.ok(content.includes(phrase), phrase);
+  f.caps('a')[0].checked = false;
+  f.get('device-settings').open = false;
+  await f.submit();
+  assert.equal(f.get('device-settings').open, true);
+  assert.match(
+    f.field('capabilities-error', 'a').textContent,
+    /Kies het tijdstempel/,
+  );
+  assert.equal(f.puts.length, 0);
+});
+
+test('six devices use one shared timing without opening individual settings or exposing driver logic', async () => {
+  const devices = Array.from({ length: 6 }, (_, i) =>
+    inventoryDevice(String(i)),
+  );
   const f = await ui({ adding: true, devices });
   f.choose('device-last-seen');
-  f.select('a', 'b', 'c');
-  assert.equal(f.get('selected-devices').children.length, 3);
-  assert.equal(f.get('similar-devices').children.length, 1);
-  f.field('expected', 'a').value = '360';
-  f.field('timeout', 'a').value = '1080';
-  findButton(f.get('similar-devices'), "Apply Device a's times to all 2")!
-    .onclick!();
-  assert.equal(f.field('expected', 'b').value, '360');
-  assert.equal(f.field('timeout', 'b').value, '1080');
-  assert.equal(f.field('expected', 'c').value, '5');
-  f.field('timeout', 'b').value = '1440';
-  f.field('expected', 'c').value = '10';
-  f.field('timeout', 'c').value = '90';
+  f.select(...devices.map((d) => d.deviceId));
+  assert.equal(f.get('device-settings').open, false);
+  assert.equal(f.get('device-picker').hidden, true);
+  assert.match(f.text('selection-summary'), /6 selected/);
+  for (const device of devices)
+    assert.ok(f.text('selection-summary').includes(device.deviceName));
+  assert.doesNotMatch(
+    f.text('selected-devices'),
+    /same app|similar devices|Apply .*times/i,
+  );
+  f.get('setup-expected').value = '360';
+  f.get('setup-timeout').value = '1080';
   await f.submit();
   assert.equal(f.puts.length, 1);
+  assert.equal(f.saved().monitors.length, 6);
+  assert.ok(
+    f
+      .saved()
+      .monitors.every(
+        (m) =>
+          m.expectedIntervalMs === 360 * 60000 &&
+          m.staleTimeoutMs === 1080 * 60000,
+      ),
+  );
+  assert.equal(new Set(f.saved().monitors.map((m) => m.id)).size, 6);
+  assert.ok(
+    f.saved().monitors.every((m) => !('group' in m) && !('override' in m)),
+  );
+});
+
+test('one override affects only that device; inherited values follow shared changes and can be restored', async () => {
+  const f = await ui({
+    adding: true,
+    devices: [
+      inventoryDevice('a'),
+      inventoryDevice('b', 'weather'),
+      inventoryDevice('c', 'different', 'other-app'),
+    ],
+  });
+  f.choose('manual');
+  f.select('a', 'b', 'c');
+  f.get('setup-expected').value = '10';
+  f.get('setup-timeout').value = '90';
+  f.get('setup-expected').oninput!();
+  f.override('b');
+  assert.equal(f.field('expected', 'b').value, '10');
+  f.field('expected', 'b').value = '360';
+  f.field('timeout', 'b').value = '1080';
+  f.override('c');
+  f.field('timeout', 'c').value = '120';
+  f.override('c');
+  f.get('setup-timeout').value = '100';
+  f.get('setup-timeout').oninput!();
+  assert.equal(f.field('timeout', 'b').value, '1080');
+  assert.equal(f.field('timeout', 'c').value, '100');
+  await f.submit();
   assert.deepEqual(
     f
       .saved()
       .monitors.map((m) => [
-        m.id,
+        m.deviceId,
         m.expectedIntervalMs / 60000,
         m.staleTimeoutMs / 60000,
       ]),
     [
-      ['a', 360, 1080],
-      ['b', 360, 1440],
-      ['c', 10, 90],
+      ['a', 10, 100],
+      ['b', 360, 1080],
+      ['c', 10, 100],
     ],
-  );
-  assert.ok(
-    f.saved().monitors.every((m) => !('group' in m) && !('driverId' in m)),
-  );
-});
-
-test('similar names, same app alone, missing driver metadata and unresolved identities never create timing groups', async () => {
-  const devices = [
-    inventoryDevice('a'),
-    inventoryDevice('b', 'different-driver'),
-    inventoryDevice('c', 'sensor', 'another-app'),
-    { ...inventoryDevice('d'), driverId: undefined },
-    { ...inventoryDevice('e'), identityResolved: false },
-  ].map((d) => ({ ...d, deviceName: 'Smoke detector' }));
-  const f = await ui({ adding: true, devices });
-  f.choose('manual');
-  f.select(...devices.map((d) => d.deviceId));
-  assert.equal(f.get('similar-devices').children.length, 0);
-  await f.submit();
-  assert.equal(f.saved().monitors.length, 5);
-  assert.equal(
-    f.saved().monitors.find((m) => m.deviceId === 'c')!.sourceAppId,
-    'another-app',
   );
 });
 
@@ -374,6 +588,7 @@ test('reopening the picker adds/removes devices, retains remaining drafts and ne
   });
   f.choose('manual');
   f.select('a', 'b');
+  f.override('a');
   f.field('timeout', 'a').value = '99';
   f.select('a', 'c');
   assert.equal(f.field('timeout', 'a').value, '99');
@@ -394,7 +609,7 @@ test('reopening the picker adds/removes devices, retains remaining drafts and ne
   );
 });
 
-test('empty or unconfirmed device selection cannot save; cancelling setup creates nothing', async () => {
+test('empty or unconfirmed selection cannot save and picker is the only cancel action in setup', async () => {
   const f = await ui({ adding: true });
   f.choose('manual');
   f.select('d');
@@ -407,9 +622,9 @@ test('empty or unconfirmed device selection cannot save; cancelling setup create
   assert.equal(f.puts.length, 0);
   assert.match(f.get('selection-error').textContent, /Select a device/);
   f.select('d');
-  f.get('cancel').onclick!();
+  assert.equal(f.get('cancel').hidden, true);
+  f.select();
   assert.equal(f.get('selected-devices').children.length, 0);
-  assert.equal(f.get('select-devices').disabled, true);
   assert.equal(f.saved().monitors.length, 0);
 });
 
@@ -451,6 +666,7 @@ test('one invalid draft blocks the whole batch; failed saves and refresh retain 
   f.choose('manual');
   f.select('a', 'b');
   f.field('expected', 'a').value = '9';
+  f.override('b');
   f.field('timeout', 'b').value = '1';
   await f.submit();
   assert.equal(f.puts.length, 0);
@@ -468,7 +684,7 @@ test('one invalid draft blocks the whole batch; failed saves and refresh retain 
   assert.equal(f.saved().monitors.length, 2);
 });
 
-test('timestamp settings remain per device through method changes and are not copied by timing shortcut', async () => {
+test('timestamp settings remain per device through method changes and shared timing updates', async () => {
   const f = await ui({
     adding: true,
     devices: [
@@ -483,8 +699,8 @@ test('timestamp settings remain per device through method changes and are not co
   f.select('a', 'b');
   f.field('encoding', 'b').value = 'epoch-ms';
   f.field('contract', 'b').value = 'Device b receipt timestamp';
-  findButton(f.get('similar-devices'), "Apply Device a's times to all 2")!
-    .onclick!();
+  f.get('setup-expected').value = '7';
+  f.get('setup-expected').oninput!();
   f.choose('manual');
   assert.equal(f.field('timestamp-fields', 'a').hidden, true);
   f.choose('timestamp-capability');
@@ -555,7 +771,7 @@ test('UI Edit loads full configuration including missing fields; Save preserves 
   assert.equal(f.saved().monitors[0].id, 'stable-id');
   assert.equal(f.saved().monitors[0].staleTimeoutMs, 240000);
   assert.equal(f.saved().monitors[0].enabled, false);
-  assert.equal(f.get('add').textContent, 'Add monitor');
+  assert.equal(f.get('add').textContent, 'Add monitors');
   assert.equal(f.get('cancel').hidden, true);
 });
 

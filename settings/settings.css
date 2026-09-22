@@ -83,17 +83,6 @@ section {
 .monitor-list .card {
   margin: 0;
 }
-.picker,
-.timing-shortcut {
-  padding: 16px;
-  margin: 16px 0;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-}
-.picker-options {
-  max-height: 320px;
-  overflow-y: auto;
-}
 #monitor-summary button[aria-pressed='true'] {
   border-color: var(--accent);
   color: var(--accent);
@@ -314,6 +303,126 @@ pre {
   overflow: hidden;
   clip-path: inset(50%);
 }
+#monitor-setup .setup-row {
+  margin-top: 16px;
+}
+#monitor-setup h3,
+#monitor-setup h4 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+.method-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+#monitor-setup .method-choice,
+#monitor-setup .selection-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+}
+#monitor-setup .method-choice {
+  border-color: var(--line);
+  font-size: 0.9rem;
+}
+.method-choice input,
+.selection-tile input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.method-choice::after,
+.selection-tile::after {
+  content: '✓';
+  opacity: 0;
+  color: var(--accent);
+}
+#monitor-setup .method-choice:has(input:checked),
+#monitor-setup .selection-tile:has(input:checked) {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+.method-choice:has(input:checked)::after,
+.selection-tile:has(input:checked)::after {
+  opacity: 1;
+}
+.method-choice:has(input:focus-visible),
+.selection-tile:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.selection-tile:has(input:disabled) {
+  opacity: 0.6;
+  cursor: default;
+}
+.selection-tile strong,
+.selection-tile small {
+  display: block;
+}
+.picker-options {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 3px;
+}
+.picker-group + .picker-group {
+  margin-top: 12px;
+}
+.selection-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#selection-summary {
+  margin: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+#select-devices {
+  flex-shrink: 0;
+}
+#monitor-setup .method-help,
+#monitor-setup .field {
+  margin: 8px 0;
+}
+#monitor-setup .method-help summary {
+  min-height: 32px;
+  padding: 4px 0;
+}
+.shared-timing label {
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+.duration {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+.duration input[type='number'] {
+  width: 105px;
+  flex-shrink: 0;
+}
+.device-options {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.device-options .enabled {
+  margin-top: 10px;
+}
+#monitor-setup .action-message:empty {
+  display: none;
+}
 @media (max-width: 540px) {
   main {
     padding: 14px;
@@ -329,6 +438,13 @@ pre {
   }
   .actions button {
     flex-grow: 1;
+  }
+  .method-options {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .selection-controls {
+    flex-wrap: wrap;
   }
 }
 @media (prefers-color-scheme: dark) {

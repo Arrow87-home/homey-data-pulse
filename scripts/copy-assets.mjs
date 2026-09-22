@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-for (const path of ['app.json', 'assets', 'settings']) {
+for (const path of ['app.json', 'assets', 'settings', 'locales']) {
   fs.cpSync(path, `.homeybuild/${path}`, { recursive: true });
 }
 
