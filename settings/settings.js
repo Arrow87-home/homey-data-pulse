@@ -2,6 +2,7 @@ let homey;
 let config;
 let inventory = [];
 let editingId = null;
+let formOpen = false;
 let saving = false;
 let initialized = false;
 let capabilityChoices = [];
@@ -57,6 +58,8 @@ const errorText = (error) =>
 function announce(id, text, error = false) {
   el(id).textContent = text;
   el(id).className = error ? 'action-message error' : 'action-message';
+  if (id === 'form-message' && el('monitor-setup').hidden && text)
+    announce('message', text, error);
 }
 function node(tag, text = '', className = '') {
   const item = document.createElement(tag);
@@ -181,6 +184,11 @@ function capabilities(saved) {
 function formMode() {
   const editing = editingId !== null;
   const picking = !el('device-picker').hidden;
+  el('monitor-setup').hidden = !formOpen;
+  el('add-monitor').disabled = saving || !config || editing;
+  el('add-monitor').setAttribute('aria-expanded', String(formOpen));
+  el('close-setup').hidden = editing || picking;
+  el('close-setup').disabled = saving;
   el('form-title').textContent = t(editing ? 'editMonitor' : 'newMonitors');
   el('add').textContent = t(
     saving ? 'saving' : editing ? 'saveChanges' : 'addMonitors',
@@ -204,6 +212,7 @@ function formMode() {
 }
 
 function resetForm() {
+  formOpen = false;
   editingId = null;
   errors = {};
   renderErrors();
@@ -228,6 +237,7 @@ function resetForm() {
 }
 function editMonitor(monitor) {
   if (saving) return;
+  formOpen = true;
   editingId = monitor.id;
   closePicker();
   errors = {};
@@ -404,7 +414,10 @@ async function writeConfig(next, reset = false) {
   try {
     await api('PUT', '/config', next);
     config = next; // Reflect a confirmed write even if a subsequent status fetch fails.
-    if (reset) resetForm();
+    if (reset) {
+      resetForm();
+      el('add-monitor').focus();
+    }
     renderMonitors();
     let refreshed = true;
     try {
@@ -914,55 +927,61 @@ function renderMonitors() {
     ...(config?.monitors ?? [])
       .filter((m) => !monitorFilter || m.strategy.kind === monitorFilter)
       .map((monitor) => {
-        const card = node('li', '', 'card');
+        const card = node('li', '', 'card monitor-card');
         const runtime = latestStatus.monitors.find(
           (m) => m.id === monitor.id,
         )?.runtime;
-        card.append(node('p', monitor.sourceAppName, 'monitor-source'));
         const heading = node('div', '', 'monitor-heading');
         heading.append(
           node('h3', monitor.deviceName),
           badge(monitor.enabled ? (runtime?.state ?? 'UNKNOWN') : 'DISABLED'),
         );
         card.append(heading);
-        const summary = node('dl');
-        rows(summary, [
-          ['Method', copy.methods[monitor.strategy.kind]],
-          [
-            'Last delivery',
-            runtime?.lastDeliveryAt == null
-              ? 'Not confirmed yet'
-              : date(runtime.lastDeliveryAt),
-          ],
-          ['Timeout', `${monitor.staleTimeoutMs / 60000} min`],
-        ]);
-        card.append(summary);
+        card.append(
+          node(
+            'p',
+            t('monitorMeta', {
+              source: monitor.sourceAppName,
+              method: copy.methods[monitor.strategy.kind],
+              minutes: monitor.staleTimeoutMs / 60000,
+            }),
+            'monitor-meta',
+          ),
+          node(
+            'p',
+            t('lastUpdate', {
+              time:
+                runtime?.lastDeliveryAt == null
+                  ? t('notConfirmed')
+                  : date(runtime.lastDeliveryAt),
+            }),
+            'monitor-last',
+          ),
+        );
         const details = node('details');
-        details.append(node('summary', 'Technical details'));
+        details.append(node('summary', t('details')));
         const technical = node('dl');
         rows(technical, [
-          ['Monitor ID', monitor.id],
-          ['Source app ID', monitor.sourceAppId],
-          ['Device ID', monitor.deviceId],
-          ['Strategy', monitor.strategy.kind],
+          [t('monitorId'), monitor.id],
+          [t('appId'), monitor.sourceAppId],
+          [t('deviceId'), monitor.deviceId],
+          [t('strategy'), monitor.strategy.kind],
           [
-            'Evidence kind',
+            t('evidenceKind'),
             monitor.strategy.kind === 'device-last-seen'
               ? 'device-activity'
               : 'data-delivery',
           ],
           [
-            'Timestamp fields',
-            monitor.strategy.capabilities?.join(', ') || 'Not applicable',
+            t('timestampFields'),
+            monitor.strategy.capabilities?.join(', ') || t('notApplicable'),
           ],
-          ['Exact last delivery', date(runtime?.lastDeliveryAt, true)],
-          ['Technical note', monitor.sourceContract || 'None'],
+          [t('exactLast'), date(runtime?.lastDeliveryAt, true)],
+          [t('technicalNote'), monitor.sourceContract || t('none')],
         ]);
         details.append(technical);
         card.append(details);
-        const actions = node('div', '', 'actions');
-        const feedback = node('p');
-        feedback.setAttribute('role', 'status');
+        const actions = node('div', '', 'actions monitor-actions');
         const edit = node('button', t('edit'));
         edit.type = 'button';
         edit.disabled = saving;
@@ -995,7 +1014,10 @@ function renderMonitors() {
             } catch (error) {
               announce(
                 'message',
-                `Could not update ${monitor.deviceName}: ${errorText(error)}`,
+                t('updateFailed', {
+                  name: monitor.deviceName,
+                  error: errorText(error),
+                }),
                 true,
               );
               el('message').scrollIntoView({ block: 'center' });
@@ -1003,7 +1025,7 @@ function renderMonitors() {
           };
           actions.append(button);
         }
-        card.append(actions, feedback);
+        card.append(actions);
         return card;
       }),
   );
@@ -1115,7 +1137,21 @@ function onHomeyReady(Homey) {
   homey = Homey;
   localizeSetup();
   homey.ready();
+  el('monitor-summary').setAttribute('aria-label', t('filterMethods'));
   formMode();
+  el('add-monitor').onclick = () => {
+    if (saving || !config || editingId !== null) return;
+    formOpen = true;
+    formMode();
+    el('form-title').scrollIntoView({ block: 'start', behavior: 'auto' });
+    el(`strategy-${kind() ?? 'device-last-seen'}`).focus();
+  };
+  el('close-setup').onclick = () => {
+    if (saving) return;
+    resetForm();
+    announce('form-message', '');
+    el('add-monitor').focus();
+  };
   el('monitor-form').onsubmit = submit;
   el('source').onchange = () => {
     devices();
@@ -1158,6 +1194,7 @@ function onHomeyReady(Homey) {
     resetForm();
     renderMonitors();
     announce('form-message', t('cancelled'));
+    el('add-monitor').focus();
   };
   el('refresh').onclick = async () => {
     if (saving) return;

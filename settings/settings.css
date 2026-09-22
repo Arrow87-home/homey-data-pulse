@@ -83,6 +83,52 @@ section {
 .monitor-list .card {
   margin: 0;
 }
+.monitor-list .monitor-card {
+  padding: 12px 14px;
+}
+.monitor-card .monitor-heading {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+.monitor-card .monitor-heading h3 {
+  font-size: 1rem;
+  min-width: 0;
+}
+.monitor-card .badge {
+  flex-shrink: 0;
+}
+.monitor-card .monitor-meta,
+.monitor-card .monitor-last {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.monitor-card details {
+  margin-top: 4px;
+}
+.monitor-card summary {
+  min-height: 32px;
+  padding: 5px 0;
+}
+.monitor-card .monitor-actions {
+  margin-top: 4px;
+  gap: 6px;
+}
+.monitor-card .monitor-actions button {
+  min-height: 34px;
+  padding: 4px 9px;
+  font-size: 0.85rem;
+  flex-grow: 0;
+}
+.monitor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#monitor-setup {
+  margin: 14px 0;
+}
 #monitor-summary button[aria-pressed='true'] {
   border-color: var(--accent);
   color: var(--accent);

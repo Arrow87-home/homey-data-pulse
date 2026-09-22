@@ -97,13 +97,14 @@ const inventoryDevice = (
   available: true,
   hasLastSeen: false,
   capabilities: [
-    { id: 'timestamp', title: 'Delivery timestamp', type: 'string' },
+    { id: 'timestamp', title: 'Last data received', type: 'string' },
   ],
 });
 async function ui(
   options: {
     adding?: boolean;
     language?: string;
+    monitors?: WatchdogConfig['monitors'];
     capabilities?: { id: string; title: string; type?: string }[];
     paired?: boolean;
     missingDevice?: boolean;
@@ -133,6 +134,7 @@ async function ui(
   };
   const initial = initialConfig();
   if (options.adding) initial.monitors = [];
+  if (options.monitors) initial.monitors = options.monitors;
   let saved = structuredClone(initial);
   let fail: unknown;
   let statusFail = false;
@@ -257,6 +259,7 @@ async function ui(
     get('message').textContent,
   );
   const choose = (kind: string) => {
+    if (get('monitor-setup').hidden) get('add-monitor').onclick!();
     for (const k of ['manual', 'timestamp-capability', 'device-last-seen'])
       get(`strategy-${k}`).checked = kind === k;
     get(`strategy-${kind}`).onchange!();
@@ -319,7 +322,10 @@ async function ui(
       statusFail = true;
     },
     edit: () => findButton(get('monitors'), 'Edit')!.onclick!(),
-    submit: () => get('monitor-form').onsubmit!({ preventDefault() {} }),
+    submit: () => {
+      if (get('monitor-setup').hidden) get('add-monitor').onclick!();
+      return get('monitor-form').onsubmit!({ preventDefault() {} });
+    },
     choose,
     caps: (id = 'd') =>
       get('edit-fields').hidden
@@ -327,6 +333,137 @@ async function ui(
         : get('capability-options').children.map((label) => label.children[0]),
   };
 }
+
+test('top Add monitor opens setup before the list; close and successful save hide it without losing feedback', async () => {
+  const f = await ui({ adding: true });
+  const html = readFileSync('settings/index.html', 'utf8');
+  assert.ok(
+    html.indexOf('id="add-monitor"') < html.indexOf('id="monitor-setup"'),
+  );
+  assert.ok(html.indexOf('id="monitor-setup"') < html.indexOf('id="monitors"'));
+  assert.equal(f.get('monitor-setup').hidden, true);
+  assert.equal(f.get('add-monitor').getAttribute('aria-expanded'), 'false');
+  f.get('add-monitor').onclick!();
+  assert.equal(f.get('monitor-setup').hidden, false);
+  assert.equal(f.get('add-monitor').getAttribute('aria-expanded'), 'true');
+  assert.equal(f.get('strategy-device-last-seen').focused, true);
+  f.choose('manual');
+  f.select('d');
+  f.get('setup-timeout').value = '90';
+  f.get('close-setup').onclick!();
+  assert.equal(f.get('monitor-setup').hidden, true);
+  assert.equal(f.puts.length, 0);
+  f.choose('manual');
+  assert.equal(f.get('setup-timeout').value, '15');
+  f.select('d');
+  await f.submit();
+  assert.equal(f.get('monitor-setup').hidden, true);
+  assert.equal(f.get('add-monitor').focused, true);
+  assert.equal(f.get('message').textContent, 'Monitor saved.');
+  assert.equal(f.saved().monitors.length, 1);
+});
+
+for (const language of ['nl', 'en'])
+  test(`${language}: compact cards show every strategy with name, status, timeout and collapsed details`, async () => {
+    const original = initialConfig().monitors[0];
+    const monitors = [
+      {
+        ...original,
+        id: 'activity',
+        deviceId: 'a',
+        strategy: { kind: 'device-last-seen' as const },
+      },
+      { ...original, id: 'data', deviceId: 'b' },
+      {
+        ...original,
+        id: 'flow',
+        deviceId: 'c',
+        strategy: { kind: 'manual' as const },
+      },
+    ];
+    const f = await ui({ language, monitors });
+    const methods =
+      language === 'nl'
+        ? [
+            'Apparaatactiviteit',
+            'Laatste gegevens ontvangen',
+            'Bevestiging via Flow',
+          ]
+        : ['Device activity', 'Last data received', 'Flow confirmation'];
+    const descriptions =
+      language === 'nl'
+        ? [
+            'Controleert of Homey het apparaat recent nog heeft gezien.',
+            'Gebruik dit als het apparaat of de app zelf bijhoudt wanneer er voor het laatst nieuwe gegevens zijn ontvangen.',
+            'Laat een Homey Flow na een geslaagde update doorgeven dat alles nog werkt.',
+          ]
+        : [
+            'Checks whether Homey has seen the device recently.',
+            'Use this when the device or app keeps track of when new data was last received.',
+            'Let a Homey Flow confirm after a successful update that everything is still working.',
+          ];
+    assert.equal(f.get('monitors').children.length, 3);
+    for (const [index, card] of f.get('monitors').children.entries()) {
+      assert.match(card.className, /monitor-card/);
+      assert.equal(card.children[0].children[0].textContent, 'Simulation');
+      assert.equal(card.children[0].children[1].textContent, 'HEALTHY');
+      const metadata = card.children.find(
+        (e) => e.className === 'monitor-meta',
+      )!;
+      assert.ok(metadata.textContent.includes(`App · ${methods[index]} ·`));
+      assert.match(metadata.textContent, /3 min/);
+      assert.match(
+        card.children.find((e) => e.className === 'monitor-last')!.textContent,
+        language === 'nl' ? /^Laatste:/ : /^Last:/,
+      );
+      assert.equal(
+        card.children.some((e) => e.tag === 'dl'),
+        false,
+      );
+      assert.equal(card.children.find((e) => e.tag === 'details')!.open, false);
+      assert.ok(f.translations().includes(methods[index]));
+      assert.ok(f.translations().includes(descriptions[index]));
+    }
+    assert.deepEqual(f.saved().monitors, monitors);
+    assert.equal(f.puts.length, 0);
+    assert.equal(
+      f.get('add-monitor').textContent,
+      language === 'nl' ? '+ Monitor toevoegen' : '+ Add monitor',
+    );
+  });
+
+test('compact card actions preserve individual edits, enabled state and removal with stable IDs and strategies', async () => {
+  const original = initialConfig().monitors[0];
+  const other = { ...original, id: 'other', deviceId: 'other-device' };
+  const f = await ui({ monitors: [original, other] });
+  assert.equal(f.get('monitor-setup').hidden, true);
+  f.edit();
+  assert.equal(f.get('monitor-setup').hidden, false);
+  assert.equal(f.get('add-monitor').disabled, true);
+  assert.equal(f.get('setup-fields').hidden, true);
+  assert.equal(f.get('strategy-timestamp-capability').checked, true);
+  f.field('timeout').value = '4';
+  await f.submit();
+  assert.deepEqual(f.saved().monitors[0], {
+    ...original,
+    staleTimeoutMs: 240000,
+  });
+  assert.deepEqual(f.saved().monitors[1], other);
+  assert.equal(f.get('monitor-setup').hidden, true);
+  await findButton(f.get('monitors').children[0], 'Disable')!.onclick!();
+  assert.equal(f.saved().monitors[0].enabled, false);
+  assert.match(text(f.get('monitors').children[0]), /DISABLED/);
+  await findButton(f.get('monitors').children[0], 'Enable')!.onclick!();
+  assert.deepEqual(f.saved().monitors[0], {
+    ...original,
+    staleTimeoutMs: 240000,
+  });
+  const remove = findButton(f.get('monitors').children[0], 'Remove')!;
+  assert.equal(remove.className, 'danger');
+  await remove.onclick!();
+  assert.deepEqual(f.saved().monitors, [other]);
+  assert.equal(f.get('monitors').children.length, 1);
+});
 
 test('setup starts with the method, then a temporary picker; one selected source saves independently', async () => {
   const f = await ui({ adding: true });
@@ -368,16 +505,16 @@ for (const language of ['en', 'nl'])
           'Controleer via',
           'Apparaten',
           'Apparaatactiviteit',
-          'Tijdstip van laatste update',
-          'Expliciete bevestiging',
+          'Laatste gegevens ontvangen',
+          'Bevestiging via Flow',
           'Instellingen per apparaat aanpassen',
         ]
       : [
           'Check via',
           'Devices',
           'Device activity',
-          'Delivery timestamp',
-          'Explicit heartbeat',
+          'Last data received',
+          'Flow confirmation',
           'Adjust settings per device',
         ])
       assert.ok(f.translations().includes(label), label);
@@ -632,14 +769,14 @@ test('bulk setup preserves existing records; summary filters lead to individual 
   const f = await ui({
     devices: [inventoryDevice('d'), inventoryDevice('a'), inventoryDevice('b')],
   });
-  assert.match(f.text('monitor-summary'), /Delivery timestamp · 1/);
+  assert.match(f.text('monitor-summary'), /Last data received · 1/);
   f.choose('manual');
   f.select('d', 'a', 'b');
   assert.equal(f.get('selected-devices').children.length, 2);
   await f.submit();
   assert.deepEqual(f.saved().monitors[0], f.initial.monitors[0]);
-  assert.match(f.text('monitor-summary'), /Explicit heartbeat · 2/);
-  findButton(f.get('monitor-summary'), 'Explicit heartbeat · 2')!.onclick!();
+  assert.match(f.text('monitor-summary'), /Flow confirmation · 2/);
+  findButton(f.get('monitor-summary'), 'Flow confirmation · 2')!.onclick!();
   assert.equal(f.get('monitors').children.length, 2);
   f.edit();
   assert.equal(f.get('edit-fields').hidden, false);
@@ -1049,8 +1186,8 @@ test('built-in Help is collapsed, local, structured and covers everyday use', ()
   assert.match(help, /<ol>/);
   for (const method of [
     'Device activity',
-    'Delivery timestamp',
-    'Explicit heartbeat',
+    'Last data received',
+    'Flow confirmation',
   ])
     assert.ok(plain.includes(method));
   for (const state of [
