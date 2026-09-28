@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { configSchema, WatchdogConfig } from '../src/core/model';
-import { InventoryDevice } from '../src/homey/inventory';
+import { buildInventory, InventoryDevice } from '../src/homey/inventory';
 
 /** Minimal DOM boundary; the actual shipped JS handles every action and validation. */
 class Element {
@@ -82,6 +82,10 @@ const initialConfig = () =>
       },
     ],
   });
+const isoCandidate = {
+  encoding: 'iso' as const,
+  at: Date.parse('2026-09-22T17:42:00Z'),
+};
 const inventoryDevice = (
   id: string,
   driverId: string | undefined = 'sensor',
@@ -97,7 +101,12 @@ const inventoryDevice = (
   available: true,
   hasLastSeen: false,
   capabilities: [
-    { id: 'timestamp', title: 'Last data received', type: 'string' },
+    {
+      id: 'timestamp',
+      title: 'Last data received',
+      type: 'string',
+      timestampCandidate: isoCandidate,
+    },
   ],
 });
 async function ui(
@@ -105,7 +114,7 @@ async function ui(
     adding?: boolean;
     language?: string;
     monitors?: WatchdogConfig['monitors'];
-    capabilities?: { id: string; title: string; type?: string }[];
+    capabilities?: InventoryDevice['capabilities'];
     paired?: boolean;
     missingDevice?: boolean;
     devices?: InventoryDevice[];
@@ -231,6 +240,7 @@ async function ui(
                             id: 'timestamp',
                             title: 'Last test heartbeat',
                             type: 'string',
+                            timestampCandidate: isoCandidate,
                           },
                         ],
                       },
@@ -621,7 +631,7 @@ test('Dutch picker marks existing monitors and optional fields stay translated',
   f.override('a');
   const content = text(f.card('a'));
   for (const phrase of [
-    'Welk veld bevat het tijdstip van de update?',
+    'Welk veld bevat het tijdstip van ontvangen gegevens?',
     'Tijdstempelformaat',
     'Verwacht update-interval',
     'Meldtermijn',
@@ -828,7 +838,14 @@ test('timestamp settings remain per device through method changes and shared tim
       inventoryDevice('a'),
       {
         ...inventoryDevice('b'),
-        capabilities: [{ id: 'epoch', title: 'Receipt', type: 'number' }],
+        capabilities: [
+          {
+            id: 'epoch',
+            title: 'Receipt',
+            type: 'number',
+            timestampCandidate: { ...isoCandidate, encoding: 'epoch-ms' },
+          },
+        ],
       },
     ],
   });
@@ -977,8 +994,18 @@ test('multiple capabilities use independent checkboxes with clear names and pres
   const f = await ui({
     adding: true,
     capabilities: [
-      { id: 'a', title: 'Delivery time', type: 'string' },
-      { id: 'b', title: 'Latest receipt', type: 'number' },
+      {
+        id: 'a',
+        title: 'Delivery time',
+        type: 'string',
+        timestampCandidate: isoCandidate,
+      },
+      {
+        id: 'b',
+        title: 'Latest receipt',
+        type: 'string',
+        timestampCandidate: isoCandidate,
+      },
       { id: 'switch', title: 'Switch', type: 'boolean' },
     ],
   });
@@ -1239,4 +1266,190 @@ test('standalone user guide is linked from README and covers setup, notification
   );
   assert.match(guide, /Any watchdog incident recovered/);
   assert.match(guide, /cannot report a complete outage/);
+});
+
+for (const language of ['nl', 'en']) {
+  test(`timestamp selection offers actual date values with a localized preview (${language})`, async () => {
+    const at = Date.parse('2026-09-22T17:42:00Z');
+    for (const [value, encoding] of [
+      ['2026-09-22T17:42:00Z', 'iso'],
+      [at / 1000, 'epoch-seconds'],
+      [at, 'epoch-ms'],
+    ] as const) {
+      const capabilities = buildInventory(
+        {
+          d: {
+            id: 'd',
+            name: 'Simulation',
+            ownerUri: 'homey:app:app',
+            capabilitiesObj: {
+              received: {
+                title: language === 'nl' ? 'Laatste ontvangst' : 'Last receipt',
+                value,
+              },
+              measure_temperature: {
+                value: 21.4,
+                lastUpdated: '2026-09-22T17:42:00Z',
+              },
+              invalid: { value: 'not a date' },
+            },
+          },
+        },
+        {},
+        {},
+        at + 1000,
+      )[0].devices[0].capabilities;
+      const f = await ui({ adding: true, language, capabilities });
+      f.choose('timestamp-capability');
+      f.select('d');
+      assert.deepEqual(
+        f.caps().map((c) => c.value),
+        ['received'],
+      );
+      const description = text(f.field('capabilities'));
+      assert.match(
+        description,
+        language === 'nl' ? /Laatste ontvangst/ : /Last receipt/,
+      );
+      assert.match(
+        description,
+        language === 'nl' ? /Huidige waarde:/ : /Current value:/,
+      );
+      assert.match(description, /2026/);
+      assert.match(description, /22/);
+      assert.equal(f.field('encoding').value, encoding);
+      await f.submit();
+      assert.equal(f.puts.length, 1);
+      assert.deepEqual(f.saved().monitors[0].strategy, {
+        kind: 'timestamp-capability',
+        capabilities: ['received'],
+        encoding,
+      });
+    }
+  });
+
+  test(`no valid time field explains alternative methods even with device settings collapsed (${language})`, async () => {
+    const f = await ui({
+      adding: true,
+      language,
+      capabilities: [
+        { id: 'temperature', title: 'Temperature', type: 'number' },
+        { id: 'co2', title: 'CO2', type: 'number' },
+      ],
+    });
+    f.choose('timestamp-capability');
+    f.select('d');
+    assert.equal(f.caps().length, 0);
+    assert.equal(f.get('device-settings').open, false);
+    assert.equal(f.get('timestamp-setup-hint').hidden, false);
+    for (const message of [
+      f.text('timestamp-setup-hint'),
+      text(f.field('capabilities')),
+    ]) {
+      assert.match(
+        message,
+        language === 'nl' ? /geen geschikt tijdveld/ : /no suitable time field/,
+      );
+      assert.match(
+        message,
+        language === 'nl'
+          ? /Apparaatactiviteit of Bevestiging via Flow/
+          : /Device activity or Flow confirmation/,
+      );
+    }
+    await f.submit();
+    assert.equal(f.puts.length, 0);
+  });
+
+  test(`saved non-candidate and missing fields stay editable with warnings (${language})`, async () => {
+    const f = await ui({
+      language,
+      capabilities: [
+        { id: 'timestamp', title: 'Previous receipt', type: 'number' },
+      ],
+    });
+    findButton(f.get('monitors'), language === 'nl' ? 'Bewerken' : 'Edit')!
+      .onclick!();
+    assert.deepEqual(
+      f
+        .caps()
+        .filter((c) => c.checked)
+        .map((c) => c.value),
+      ['timestamp', 'missing-cap'],
+    );
+    assert.match(f.text('capability-options'), /Previous receipt/);
+    assert.match(
+      f.text('capability-options'),
+      language === 'nl'
+        ? /niet als geschikt tijdstip herkend/
+        : /not recognized as a suitable time/,
+    );
+    assert.match(
+      f.text('capability-options'),
+      language === 'nl' ? /ontbreekt momenteel/ : /currently missing/,
+    );
+    f.field('timeout').value = '6';
+    await f.submit();
+    assert.equal(f.puts.length, 1);
+    assert.equal(f.saved().monitors.length, 1);
+    assert.equal(f.saved().monitors[0].id, 'stable-id');
+    assert.deepEqual(
+      f.saved().monitors[0].strategy,
+      f.initial.monitors[0].strategy,
+    );
+  });
+}
+
+test('new timestamp selections cannot silently use the wrong encoding or mixed encodings', async () => {
+  const f = await ui({
+    adding: true,
+    capabilities: [
+      {
+        id: 'iso',
+        title: 'Receipt',
+        type: 'string',
+        timestampCandidate: isoCandidate,
+      },
+      {
+        id: 'seconds',
+        title: 'Other receipt',
+        type: 'number',
+        timestampCandidate: { ...isoCandidate, encoding: 'epoch-seconds' },
+      },
+    ],
+  });
+  f.choose('timestamp-capability');
+  f.select('d');
+  for (const c of f.caps()) c.checked = true;
+  await f.submit();
+  assert.equal(f.puts.length, 0);
+  assert.match(f.field('encoding-error').textContent, /does not match/);
+  f.caps()[0].checked = false;
+  f.field('encoding').value = 'epoch-seconds';
+  await f.submit();
+  assert.equal(f.puts.length, 1);
+});
+
+test('saved encoding mismatch warns without changing the stored selection or preventing an edit', async () => {
+  const f = await ui({
+    capabilities: [
+      {
+        id: 'timestamp',
+        title: 'Receipt',
+        type: 'number',
+        timestampCandidate: { ...isoCandidate, encoding: 'epoch-ms' },
+      },
+    ],
+  });
+  f.edit();
+  assert.match(
+    f.text('capability-options'),
+    /does not match the saved time format/,
+  );
+  await f.submit();
+  assert.equal(f.puts.length, 1);
+  assert.deepEqual(
+    f.saved().monitors[0].strategy,
+    f.initial.monitors[0].strategy,
+  );
 });

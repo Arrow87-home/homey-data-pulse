@@ -143,17 +143,49 @@ function devices() {
     el('device').value = group.devices[0].deviceId;
   capabilities();
 }
-function capabilities(saved) {
-  // Types constrain the encoding, not the source's delivery contract. No measurement
-  // value or lastUpdated is ever promoted to a timestamp by this UI.
-  const available = (selectedDevice()?.capabilities ?? []).filter(
-    (c) => !c.type || ['string', 'number', 'unknown'].includes(c.type),
-  );
-  const choices = [...available];
-  for (const id of saved ?? [])
-    if (!choices.some((c) => c.id === id))
-      choices.push({ id, title: id, missing: true });
+function timestampDescription(capability) {
+  const description = node('span');
+  description.append(node('strong', capability.title));
+  if (capability.timestampCandidate) {
+    const time = new Date(capability.timestampCandidate.at).toLocaleString(
+      t('dateLocale'),
+      {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      },
+    );
+    description.append(node('small', t('timestampPreview', { time })));
+  }
+  description.append(node('small', capability.id, 'capability-id'));
+  if (capability.warning)
+    description.append(node('small', t(capability.warning)));
+  return description;
+}
+function capabilities(saved, savedEncoding) {
+  const all = selectedDevice()?.capabilities ?? [];
+  const available = all.filter((c) => c.timestampCandidate);
+  const choices = available.map((c) => ({ ...c }));
+  for (const id of saved ?? []) {
+    let capability = choices.find((c) => c.id === id);
+    if (!capability) {
+      const existing = all.find((c) => c.id === id);
+      capability = {
+        ...existing,
+        id,
+        title: existing?.title ?? id,
+        warning: existing ? 'unverifiedSavedField' : 'missingField',
+      };
+      choices.push(capability);
+    } else if (capability.timestampCandidate.encoding !== savedEncoding) {
+      capability.warning = 'savedFormatMismatch';
+    }
+  }
   const selected = saved ?? (available.length === 1 ? [available[0].id] : []);
+  if (!saved && available.length === 1)
+    el('encoding').value = available[0].timestampCandidate.encoding;
   capabilityChoices = [];
   el('capability-options').replaceChildren(
     ...choices.map((capability, index) => {
@@ -168,18 +200,12 @@ function capabilities(saved) {
         'capabilities-help capabilities-error',
       );
       input.onchange = correctErrors;
-      const text = node('span');
-      text.append(
-        node('strong', capability.title),
-        node('small', capability.id, 'capability-id'),
-      );
-      if (capability.missing) text.append(node('small', t('missingField')));
-      label.append(input, text);
+      label.append(input, timestampDescription(capability));
       capabilityChoices.push(input);
       return label;
     }),
   );
-  el('capabilities-empty').hidden = choices.length !== 0;
+  el('capabilities-empty').hidden = available.length !== 0;
 }
 function formMode() {
   const editing = editingId !== null;
@@ -252,6 +278,7 @@ function editMonitor(monitor) {
     monitor.strategy.kind === 'timestamp-capability'
       ? monitor.strategy.capabilities
       : undefined,
+    monitor.strategy.encoding,
   );
   setKind(monitor.strategy.kind);
   el('encoding').value = monitor.strategy.encoding ?? 'iso';
@@ -278,6 +305,8 @@ function validate() {
     ...issues,
     ...validateValues({
       kind: kind(),
+      deviceCapabilities: selectedDevice()?.capabilities ?? [],
+      savedStrategy: config?.monitors.find((m) => m.id === editingId)?.strategy,
       capabilities: selectedCapabilities(),
       encoding: el('encoding').value,
       expected: el('expected').value,
@@ -296,6 +325,22 @@ function validateValues(values) {
       issues.capabilities = t('maxFields');
     if (!['iso', 'epoch-seconds', 'epoch-ms'].includes(values.encoding))
       issues.encoding = t('chooseEncoding');
+    else if (
+      values.capabilities.some((id) => {
+        // Keep existing selections editable even if the current value is missing/invalid.
+        if (
+          values.savedStrategy?.kind === 'timestamp-capability' &&
+          values.savedStrategy.encoding === values.encoding &&
+          values.savedStrategy.capabilities.includes(id)
+        )
+          return false;
+        return (
+          values.deviceCapabilities?.find((c) => c.id === id)
+            ?.timestampCandidate?.encoding !== values.encoding
+        );
+      })
+    )
+      issues.encoding = t('fieldFormatMismatch');
   }
   for (const field of ['expected', 'timeout']) {
     const milliseconds = Number(values[field]) * 60000;
@@ -627,9 +672,7 @@ function createDraft(device) {
     node('legend', t('timestampField')),
     node('small', el('capabilities-help').textContent),
   );
-  const compatible = device.capabilities.filter(
-    (c) => !c.type || ['string', 'number', 'unknown'].includes(c.type),
-  );
+  const compatible = device.capabilities.filter((c) => c.timestampCandidate);
   for (const capability of compatible) {
     const label = node('label', '', 'choice');
     const input = node('input');
@@ -638,12 +681,7 @@ function createDraft(device) {
     input.checked = compatible.length === 1;
     input.setAttribute('aria-describedby', `${choices.id}-error`);
     input.onchange = () => correctDraftErrors(draft);
-    const description = node('span');
-    description.append(
-      node('strong', capability.title),
-      node('small', capability.id, 'capability-id'),
-    );
-    label.append(input, description);
+    label.append(input, timestampDescription(capability));
     choices.append(label);
     draft.capabilityInputs.push(input);
   }
@@ -660,6 +698,8 @@ function createDraft(device) {
     option('epoch-seconds', t('seconds')),
     option('epoch-ms', t('milliseconds')),
   );
+  if (compatible.length === 1)
+    draft.controls.encoding.value = compatible[0].timestampCandidate.encoding;
   encoding.append(node('small', el('encoding-help').textContent));
   draft.timestamp.append(choices, encoding);
   draft.card.append(draft.timestamp);
@@ -703,6 +743,7 @@ function createDraft(device) {
 }
 function draftValues(draft) {
   return {
+    deviceCapabilities: draft.device.capabilities,
     kind: kind(),
     capabilities: draft.capabilityInputs
       .filter((i) => i.checked)
@@ -780,6 +821,12 @@ function renderSetup() {
   el('selection-error').hidden = true;
   el('setup-timing').hidden = drafts.size === 0;
   el('timestamp-setup-hint').hidden = kind() !== 'timestamp-capability';
+  el('timestamp-setup-hint').textContent = [
+    t('timestampHint'),
+    ...[...drafts.values()]
+      .filter((d) => !d.device.capabilities.some((c) => c.timestampCandidate))
+      .map((d) => `${d.device.deviceName}: ${t('noTimestampFields')}`),
+  ].join(' ');
   for (const draft of drafts.values()) {
     draft.timestamp.hidden = kind() !== 'timestamp-capability';
     syncDraftTiming(draft);

@@ -22,9 +22,56 @@ export function parseTimestamp(
     /^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(value)
   )
     time = Date.parse(value);
-  if (encoding !== 'iso' && typeof value === 'number')
+  if (encoding !== 'iso' && typeof value === 'number') {
     time = value * (encoding === 'epoch-seconds' ? 1000 : 1);
+    // Delivery epochs must be between 2000-01-01 and 2100-01-01 (exclusive).
+    // A measurement such as 21.4, 400 or 1234 is not a delivery timestamp.
+    if (time < 946684800000 || time >= 4102444800000) return null;
+  }
   return Number.isFinite(time) && time >= 0 ? time : null;
+}
+
+/** Strict capability-value parsing; leaves native activity/manual ISO handling intact. */
+export function parseCapabilityTimestamp(
+  value: unknown,
+  encoding: 'iso' | 'epoch-seconds' | 'epoch-ms',
+): number | null {
+  if (encoding === 'iso') {
+    if (typeof value !== 'string') return null;
+    const parts =
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-](\d{2}):(\d{2}))$/.exec(
+        value,
+      );
+    if (!parts) return null;
+    const [
+      ,
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      ,
+      offsetHour,
+      offsetMinute,
+    ] = parts;
+    const days = new Date(
+      Date.UTC(Number(year), Number(month), 0),
+    ).getUTCDate();
+    if (
+      Number(month) < 1 ||
+      Number(month) > 12 ||
+      Number(day) < 1 ||
+      Number(day) > days ||
+      Number(hour) > 23 ||
+      Number(minute) > 59 ||
+      Number(second) > 59 ||
+      Number(offsetHour ?? 0) > 23 ||
+      Number(offsetMinute ?? 0) > 59
+    )
+      return null;
+  }
+  return parseTimestamp(value, encoding);
 }
 export class TimestampCapabilityStrategy implements DeliveryDetector {
   read(
@@ -35,7 +82,9 @@ export class TimestampCapabilityStrategy implements DeliveryDetector {
     if (config.strategy.kind !== 'timestamp-capability') return null;
     const { encoding, capabilities } = config.strategy;
     const times = capabilities
-      .map((id) => parseTimestamp(sample.capabilities?.[id]?.value, encoding))
+      .map((id) =>
+        parseCapabilityTimestamp(sample.capabilities?.[id]?.value, encoding),
+      )
       .filter((t): t is number => t !== null && t <= observedAt);
     return times.length ? Math.max(...times) : null;
   }

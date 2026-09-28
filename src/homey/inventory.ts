@@ -1,9 +1,11 @@
 import { TEST_APP_ID, TEST_DATA_ID, TEST_DRIVER_ID } from './test-source';
+import { parseCapabilityTimestamp } from '../core/detectors';
 export interface CapabilityRecord {
   value?: unknown;
   lastUpdated?: unknown;
   title?: string;
   type?: string;
+  units?: unknown;
   getable?: boolean;
   setable?: boolean;
 }
@@ -37,7 +39,16 @@ export interface InventoryDevice {
   available: boolean | null;
   hasLastSeen: boolean;
   isTestSource?: boolean;
-  capabilities: { id: string; title: string; type: string }[];
+  capabilities: {
+    id: string;
+    title: string;
+    type: string;
+    /** Advisory inventory snapshot, never used as runtime evidence. */
+    timestampCandidate?: {
+      encoding: 'iso' | 'epoch-seconds' | 'epoch-ms';
+      at: number;
+    };
+  }[];
 }
 export interface InventoryGroup {
   sourceAppId: string;
@@ -71,10 +82,32 @@ function appName(app: AppRecord | undefined, fallback: string): string {
   if (typeof app?.name === 'string') return app.name;
   return app?.name?.en ?? fallback;
 }
+function timestampCandidate(
+  id: string,
+  capability: CapabilityRecord | undefined,
+  now: number,
+): InventoryDevice['capabilities'][number]['timestampCandidate'] {
+  if (
+    !capability ||
+    /^(measure|meter)_/.test(id) ||
+    (capability.type &&
+      !['string', 'number', 'unknown'].includes(capability.type)) ||
+    (capability.units != null &&
+      capability.units !== '' &&
+      !['s', 'ms'].includes(String(capability.units)))
+  )
+    return undefined;
+  for (const encoding of ['iso', 'epoch-seconds', 'epoch-ms'] as const) {
+    const at = parseCapabilityTimestamp(capability.value, encoding);
+    if (at !== null && at <= now) return { encoding, at };
+  }
+  return undefined;
+}
 export function buildInventory(
   devices: Record<string, DeviceRecord>,
   apps: Record<string, AppRecord>,
   zones: Record<string, { name: string }>,
+  now = Date.now(),
 ): InventoryGroup[] {
   const groups = new Map<string, InventoryGroup>();
   for (const app of Object.values(apps))
@@ -113,6 +146,11 @@ export function buildInventory(
         id,
         title: device.capabilitiesObj?.[id]?.title ?? id,
         type: device.capabilitiesObj?.[id]?.type ?? 'unknown',
+        timestampCandidate: timestampCandidate(
+          id,
+          device.capabilitiesObj?.[id],
+          now,
+        ),
       })),
     });
     groups.set(source.id, group);

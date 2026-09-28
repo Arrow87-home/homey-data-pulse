@@ -12,6 +12,7 @@ import { SettingsPersistence } from '../src/homey/persistence';
 import { flowTokens } from '../src/homey/tokens';
 import { WatchdogService } from '../src/homey/service';
 
+const timestampBase = Date.parse('2026-09-17T10:00:00Z');
 const requireModule = createRequire(`${process.cwd()}/test/adapter.test.ts`);
 const makeConfig = (kind = 'timestamp-capability') =>
   configSchema.parse({
@@ -91,8 +92,10 @@ test('official in-app factory selects local API v3 for the documented SHS/Pro pl
 test('strategies use explicit value semantics, never lastUpdated of ordinary measurements', () => {
   const m = makeConfig().monitors[0];
   assert.equal(
-    detectors[0].read(m, { capabilities: { last_report: { value: 123_000 } } }),
-    123_000,
+    detectors[0].read(m, {
+      capabilities: { last_report: { value: timestampBase + 23_000 } },
+    }),
+    timestampBase + 23_000,
   );
   assert.equal(
     detectors[0].read(m, {
@@ -102,7 +105,7 @@ test('strategies use explicit value semantics, never lastUpdated of ordinary mea
   );
   assert.equal(parseTimestamp('2026-09-17T10:00:00', 'iso'), null);
   assert.equal(parseTimestamp('1234', 'epoch-ms'), null);
-  assert.equal(parseTimestamp(123, 'epoch-seconds'), 123_000);
+  assert.equal(parseTimestamp(123, 'epoch-seconds'), null);
   const activity = makeConfig('device-last-seen').monitors[0];
   assert.equal(
     detectors[1].read(activity, { lastSeenAt: new Date(123_000) }),
@@ -198,7 +201,7 @@ function fakeApi() {
     id: 'd',
     name: 'Renamed',
     ownerUri: 'homey:app:test.app',
-    capabilitiesObj: { last_report: { value: 100_000 } },
+    capabilitiesObj: { last_report: { value: timestampBase } },
     async connect() {},
     makeCapabilityInstance(_id, listener) {
       created++;
@@ -253,16 +256,16 @@ function fakeApi() {
 test('adapter deduplicates listeners, treats snapshots at source time, cleans up removed devices', async () => {
   const fake = fakeApi();
   const adapter = new HomeyApiAdapter(fake.api);
-  let time = 100_000;
+  let time = timestampBase;
   const e = new WatchdogEngine(makeConfig(), { now: () => time });
   await adapter.start();
   await adapter.refresh(e, true);
   await adapter.refresh(e, false);
   assert.equal(fake.counts().created, 1);
-  assert.equal(e.runtimeView('m').lastDeliveryAt, 100_000);
-  time = 101_000;
-  fake.emit(101_000);
-  assert.equal(e.runtimeView('m').lastDeliveryAt, 101_000);
+  assert.equal(e.runtimeView('m').lastDeliveryAt, timestampBase);
+  time = timestampBase + 1000;
+  fake.emit(timestampBase + 1000);
+  assert.equal(e.runtimeView('m').lastDeliveryAt, timestampBase + 1000);
   fake.setPresent(false);
   await adapter.refresh(e, false);
   assert.equal(e.status('m'), 'MISSING');
@@ -273,7 +276,7 @@ test('adapter deduplicates listeners, treats snapshots at source time, cleans up
 test('snapshot refetch and administrative metadata cannot refresh last delivery', async () => {
   const fake = fakeApi();
   const adapter = new HomeyApiAdapter(fake.api);
-  let time = 100_000;
+  let time = timestampBase;
   const e = new WatchdogEngine(makeConfig(), { now: () => time });
   await adapter.start();
   await adapter.refresh(e, true);
@@ -281,7 +284,7 @@ test('snapshot refetch and administrative metadata cannot refresh last delivery'
   fake.device.name = 'New name';
   fake.emitter.emit('device.update', fake.device);
   await adapter.refresh(e, false);
-  assert.equal(e.runtimeView('m').lastDeliveryAt, 100_000);
+  assert.equal(e.runtimeView('m').lastDeliveryAt, timestampBase);
   assert.equal(e.monitor('m').deviceName, 'New name');
   await adapter.stop();
 });
@@ -289,7 +292,7 @@ test('missing selected capability becomes unobservable, not a false data-deliver
   const fake = fakeApi();
   fake.device.capabilitiesObj = {};
   const adapter = new HomeyApiAdapter(fake.api);
-  const e = new WatchdogEngine(makeConfig(), { now: () => 100_000 });
+  const e = new WatchdogEngine(makeConfig(), { now: () => timestampBase });
   await adapter.start();
   await adapter.refresh(e, true);
   assert.equal(e.status('m'), 'MISSING');
@@ -314,7 +317,7 @@ test('settings retain separate config/runtime and reject malformed config', () =
 });
 test('Flow payload is primitive, includes uncertainty and matches manifest tokens', () => {
   const c = makeConfig();
-  let time = 100_000;
+  let time = timestampBase;
   const e = new WatchdogEngine(c, { now: () => time });
   time += 180_000;
   e.evaluate();
@@ -336,7 +339,7 @@ test('Flow payload is primitive, includes uncertainty and matches manifest token
 test('service coalesces scans, suspends on disconnection, bounds retries and resumes with grace', async () => {
   const fake = fakeApi();
   const adapter = new HomeyApiAdapter(fake.api);
-  let time = 100_000;
+  let time = timestampBase;
   const data = new Map<string, unknown>([['watchdog-config', makeConfig()]]);
   const store = new SettingsPersistence({
     get: (k) => data.get(k),
@@ -384,10 +387,15 @@ test('a future timestamp cannot hide a valid second timestamp in any-of strategy
   assert.equal(
     detectors[0].read(
       m,
-      { capabilities: { a: { value: 300_000 }, b: { value: 100_000 } } },
-      100_000,
+      {
+        capabilities: {
+          a: { value: timestampBase + 200_000 },
+          b: { value: timestampBase },
+        },
+      },
+      timestampBase,
     ),
-    100_000,
+    timestampBase,
   );
   assert.equal(
     detectors[1].read(makeConfig('device-last-seen').monitors[0], {
@@ -400,7 +408,7 @@ test('a future timestamp cannot hide a valid second timestamp in any-of strategy
 test('service does not send alerts after a failed checkpoint and exposes persistence failure', async () => {
   const fake = fakeApi();
   const adapter = new HomeyApiAdapter(fake.api);
-  let time = 100_000;
+  let time = timestampBase;
   const c = makeConfig('manual');
   c.monitors[0].expectedIntervalMs = 1000;
   c.monitors[0].staleTimeoutMs = 10_000;
@@ -438,7 +446,7 @@ test('service does not send alerts after a failed checkpoint and exposes persist
 test('editing reuses listeners targeting the current engine; strategy removal and re-add never duplicate listeners', async () => {
   const fake = fakeApi();
   const adapter = new HomeyApiAdapter(fake.api);
-  let time = 100_000;
+  let time = timestampBase;
   const memory = new Map<string, unknown>([['watchdog-config', makeConfig()]]);
   const store = new SettingsPersistence({
     get: (k) => memory.get(k),
@@ -467,7 +475,7 @@ test('editing reuses listeners targeting the current engine; strategy removal an
   fake.emit(time);
   await service.tick();
   assert.equal(service.engine.runtimeView('m').lastDeliveryAt, time);
-  assert.equal(initial.runtimeView('m').lastDeliveryAt, 100_000);
+  assert.equal(initial.runtimeView('m').lastDeliveryAt, timestampBase);
   const changed = structuredClone(service.engine.config);
   changed.monitors[0].strategy = { kind: 'manual' };
   time += 1000;
