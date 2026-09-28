@@ -1763,7 +1763,7 @@ test('More uses native keyboard disclosure, exclusive expansion and focus recove
   assert.equal(remove.className, 'danger');
   await remove.onclick!();
   assert.deepEqual(f.saved().monitors, [other]);
-  assert.equal(findButton(f.get('monitors'), 'Edit')!.focused, true);
+  assert.equal(overflow().children[0].focused, true);
   await findButton(open(), 'Remove')!.onclick!();
   assert.equal(f.get('add-monitor').focused, true);
   assert.equal(f.get('monitors-empty').hidden, false);
@@ -1841,4 +1841,92 @@ test('all static copy is locale-owned; compact responsive layout supports long l
   );
   assert.equal(f.get('monitor-count').textContent, '10 van 10 bronnen actief');
   assert.deepEqual(f.saved().monitors, monitors);
+});
+
+for (const language of ['nl', 'en']) {
+  test(`${language}: aligned header cluster keeps add, refresh and help functional`, async () => {
+    const f = await ui({ language });
+    assert.equal(f.get('add-monitor').className, 'primary');
+    f.get('add-monitor').onclick!();
+    assert.equal(f.get('monitor-setup').hidden, false);
+    f.get('close-setup').onclick!();
+    await f.get('refresh').onclick!();
+    assert.equal(
+      f.get('message').textContent,
+      language === 'nl' ? 'Status vernieuwd.' : 'Status refreshed.',
+    );
+    f.get('help-toggle').onclick!();
+    assert.equal(f.get('help').open, true);
+    assert.equal(f.get('help-toggle').getAttribute('aria-expanded'), 'true');
+    assert.equal(f.get('help-summary').focused, true);
+    assert.equal(f.puts.length, 0);
+  });
+
+  test(`${language}: Edit is first in More and edits the same monitor without visible row actions`, async () => {
+    const original = initialConfig().monitors[0];
+    const other = {
+      ...original,
+      id: 'other',
+      deviceId: 'other-device',
+      deviceName: 'Other device',
+    };
+    const f = await ui({ language, monitors: [original, other] });
+    const row = () => f.get('monitors').children[1];
+    const menu = () =>
+      descendants(row()).find((e) => e.className === 'monitor-more')!;
+    const labels =
+      language === 'nl'
+        ? ['Bewerken', 'Uitschakelen', 'Verwijderen']
+        : ['Edit', 'Disable', 'Remove'];
+    const actions = descendants(row()).find(
+      (e) => e.className === 'monitor-actions',
+    )!;
+    assert.equal(actions.children.length, 1);
+    assert.equal(actions.children[0], menu());
+    assert.doesNotMatch(
+      visibleText(row()),
+      /Bewerken|Edit|Uitschakelen|Disable|Verwijderen|Remove/,
+    );
+    assert.deepEqual(
+      menu()
+        .children[1].children.filter((e) => e.tag === 'button')
+        .map((e) => e.textContent),
+      labels,
+    );
+    assert.equal(findButton(menu(), labels[2])!.className, 'danger');
+    assert.equal(
+      menu().children[0].getAttribute('aria-label'),
+      language === 'nl'
+        ? 'Meer acties voor Other device'
+        : 'More actions for Other device',
+    );
+    menu().open = true;
+    menu().ontoggle!();
+    findButton(menu(), labels[0])!.onclick!();
+    assert.equal(menu().open, false);
+    assert.equal(f.get('monitor-setup').hidden, false);
+    assert.equal(f.get('device').value, other.deviceId);
+    assert.equal(f.get('strategy-timestamp-capability').focused, true);
+    assert.equal(
+      f.field('timeout').value,
+      String(other.staleTimeoutMs / 60000),
+    );
+    await f.submit();
+    assert.deepEqual(f.saved().monitors, [original, other]);
+    assert.equal(f.saved().monitors[1].id, 'other');
+    assert.equal(menu().open, false);
+  });
+}
+
+test('header secondary actions share the primary width with equal columns and responsive bounds', () => {
+  const css = readFileSync('settings/settings.css', 'utf8');
+  assert.match(
+    css,
+    /\.monitor-toolbar\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*width: max-content;[^}]*max-width: 100%;[^}]*gap: 4px;/,
+  );
+  assert.match(
+    css,
+    /\.utility-actions\s*\{[^}]*display: grid;[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[^}]*gap: 4px;/,
+  );
+  assert.match(css, /\.utility-actions button\s*\{[^}]*min-height: 36px;/);
 });

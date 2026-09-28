@@ -1095,7 +1095,6 @@ function renderMonitors() {
         edit.type = 'button';
         edit.disabled = saving;
         edit.onclick = () => editMonitor(monitor);
-        actions.append(edit);
         const more = node('details', '', 'monitor-more');
         const moreToggle = node('summary', '⋯');
         moreToggle.setAttribute(
@@ -1106,6 +1105,7 @@ function renderMonitors() {
         const extra = node('div', '', 'more-actions');
         extra.id = `monitor-actions-${index}`;
         moreToggle.setAttribute('aria-controls', extra.id);
+        extra.append(edit);
         more.append(moreToggle, extra);
         monitorControls.set(monitor.id, { edit, more, moreToggle });
         more.ontoggle = () => {
@@ -1175,7 +1175,7 @@ function renderMonitors() {
             } finally {
               (
                 monitorControls.get(monitor.id)?.moreToggle ??
-                monitorControls.values().next().value?.edit ??
+                monitorControls.values().next().value?.moreToggle ??
                 el('add-monitor')
               ).focus();
             }

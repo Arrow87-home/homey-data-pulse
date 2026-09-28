@@ -110,13 +110,15 @@ button:disabled {
   font-size: 0.85rem;
 }
 .monitor-toolbar {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: max-content;
+  max-width: 100%;
+  gap: 4px;
 }
 .utility-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
 }
 .utility-actions button {
