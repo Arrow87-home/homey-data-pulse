@@ -22,6 +22,12 @@ class Element {
   onchange?: () => unknown;
   oninput?: () => unknown;
   onsubmit?: (event: { preventDefault(): void }) => Promise<void>;
+  ontoggle?: () => unknown;
+  onkeydown?: (event: { key: string; preventDefault(): void }) => unknown;
+  onfocusout?: (event: { relatedTarget: Element | null }) => unknown;
+  contains(other: Element | null) {
+    return other !== null && descendants(this).includes(other);
+  }
   focused = false;
   scrolled = false;
   constructor(readonly tag = 'input') {}
@@ -50,6 +56,14 @@ class Element {
 }
 const text = (element: Element): string =>
   [element.textContent, ...element.children.map(text)].join(' ');
+const visibleText = (element: Element): string => {
+  if (element.hidden) return '';
+  const children =
+    element.tag === 'details' && !element.open
+      ? element.children.filter((child) => child.tag === 'summary')
+      : element.children;
+  return [element.textContent, ...children.map(visibleText)].join(' ');
+};
 const findButton = (element: Element, label: string): Element | undefined =>
   element.tag === 'button' && element.textContent === label
     ? element
@@ -116,6 +130,12 @@ async function ui(
     monitors?: WatchdogConfig['monitors'];
     capabilities?: InventoryDevice['capabilities'];
     paired?: boolean;
+    runtimeStates?: Record<string, string>;
+    lastDeliveryAt?: number | null;
+    sourceError?: string;
+    observerState?: string;
+    restoreState?: string;
+    integrationState?: string;
     missingDevice?: boolean;
     devices?: InventoryDevice[];
   } = {},
@@ -157,10 +177,12 @@ async function ui(
     lastGeneratedAt: null,
     nativeLastSeen: 'not-sent',
     manualDeliveries: 0,
+    lastError: options.sourceError,
   });
   const context = vm.createContext({
     window: {},
     document: {
+      documentElement: new Element('html'),
       getElementById: get,
       querySelectorAll: () =>
         staticElements.filter((e) => e.getAttribute('data-i18n')),
@@ -248,13 +270,26 @@ async function ui(
               },
             ],
         '/status': {
-          observer: 'observing',
-          restore: 'restored',
+          observer: options.observerState ?? 'observing',
+          restore: options.restoreState ?? 'restored',
           dispatchFailures: 0,
-          integrations: [{ sourceAppId: 'app', state: 'HEALTHY' }],
+          integrations: saved.monitors.length
+            ? [
+                {
+                  sourceAppId: 'app',
+                  state: options.integrationState ?? 'HEALTHY',
+                },
+              ]
+            : [],
           monitors: saved.monitors.map((m) => ({
             ...m,
-            runtime: { state: 'HEALTHY', lastDeliveryAt: 1000000 },
+            runtime: {
+              state: options.runtimeStates?.[m.id] ?? 'HEALTHY',
+              lastDeliveryAt:
+                options.lastDeliveryAt === undefined
+                  ? 1000000
+                  : options.lastDeliveryAt,
+            },
           })),
         },
         '/test-source': source(),
@@ -309,6 +344,7 @@ async function ui(
   };
   return {
     get,
+    language: () => context.document.documentElement.lang,
     field,
     select,
     card,
@@ -414,23 +450,33 @@ for (const language of ['nl', 'en'])
           ];
     assert.equal(f.get('monitors').children.length, 3);
     for (const [index, card] of f.get('monitors').children.entries()) {
-      assert.match(card.className, /monitor-card/);
+      assert.equal(card.className, 'monitor-row');
       assert.equal(card.children[0].children[0].textContent, 'Simulation');
-      assert.equal(card.children[0].children[1].textContent, 'HEALTHY');
+      assert.equal(
+        card.children[0].children[1].textContent,
+        language === 'nl' ? 'Gezond' : 'Healthy',
+      );
       const metadata = card.children.find(
         (e) => e.className === 'monitor-meta',
       )!;
       assert.ok(metadata.textContent.includes(`App · ${methods[index]} ·`));
       assert.match(metadata.textContent, /3 min/);
       assert.match(
-        card.children.find((e) => e.className === 'monitor-last')!.textContent,
-        language === 'nl' ? /^Laatste:/ : /^Last:/,
+        descendants(card).find((e) => e.className === 'monitor-last')!
+          .textContent,
+        language === 'nl'
+          ? /^(Laatste activiteit|Laatst ontvangen):/
+          : /^(Last activity|Last received):/,
       );
       assert.equal(
         card.children.some((e) => e.tag === 'dl'),
         false,
       );
-      assert.equal(card.children.find((e) => e.tag === 'details')!.open, false);
+      assert.equal(
+        descendants(card).find((e) => e.className === 'monitor-technical')!
+          .open,
+        false,
+      );
       assert.ok(f.translations().includes(methods[index]));
       assert.ok(f.translations().includes(descriptions[index]));
     }
@@ -548,7 +594,7 @@ for (const language of ['en', 'nl'])
     );
     assert.equal(
       f.get('select-devices').textContent,
-      dutch ? 'Selectie wijzigen' : 'Change selection',
+      dutch ? 'Wijzigen' : 'Change',
     );
     assert.equal(
       f.get('add').textContent,
@@ -597,7 +643,7 @@ test('method and device tiles retain native accessible selection semantics witho
   );
   assert.match(
     css,
-    /\.method-choice input,\s*\.selection-tile input\s*\{[^}]*clip-path: inset\(50%\)/,
+    /\.method-choice input,\s*\.selection-tile input,\s*\.choice input\s*\{[^}]*clip-path: inset\(50%\)/,
   );
   assert.match(css, /\.method-choice:has\(input:focus-visible\)/);
   assert.match(css, /\.selection-tile:has\(input:focus-visible\)/);
@@ -779,14 +825,14 @@ test('bulk setup preserves existing records; summary filters lead to individual 
   const f = await ui({
     devices: [inventoryDevice('d'), inventoryDevice('a'), inventoryDevice('b')],
   });
-  assert.match(f.text('monitor-summary'), /Last data received · 1/);
+  assert.match(f.text('monitor-summary'), /Data · 1/);
   f.choose('manual');
   f.select('d', 'a', 'b');
   assert.equal(f.get('selected-devices').children.length, 2);
   await f.submit();
   assert.deepEqual(f.saved().monitors[0], f.initial.monitors[0]);
-  assert.match(f.text('monitor-summary'), /Flow confirmation · 2/);
-  findButton(f.get('monitor-summary'), 'Flow confirmation · 2')!.onclick!();
+  assert.match(f.text('monitor-summary'), /Flow · 2/);
+  findButton(f.get('monitor-summary'), 'Flow · 2')!.onclick!();
   assert.equal(f.get('monitors').children.length, 2);
   f.edit();
   assert.equal(f.get('edit-fields').hidden, false);
@@ -1134,18 +1180,18 @@ test('self-test and observer use readable summaries; unpaired controls are hidde
   assert.equal(f.get('test-unpaired').hidden, false);
   assert.match(f.text('observer-summary'), /Connected/);
   assert.match(f.text('observer-summary'), /Dispatch failures 0/);
-  assert.match(f.text('integration-status'), /App HEALTHY/);
+  assert.match(f.text('integration-status'), /App Healthy/);
   assert.match(f.get('status').textContent, /"observer"/);
   const paired = await ui({ paired: true });
   assert.equal(paired.get('test-paired').hidden, false);
-  assert.equal(paired.get('test-badge').textContent, 'STOPPED');
+  assert.equal(paired.get('test-badge').textContent, 'Stopped');
   assert.match(paired.text('test-summary'), /30 s/);
   assert.match(paired.text('test-details'), /Not sent/);
   await paired.get('test-start').onclick!();
-  assert.equal(paired.get('test-badge').textContent, 'RUNNING');
+  assert.equal(paired.get('test-badge').textContent, 'Running');
   await paired.get('test-stop').onclick!();
   await paired.get('test-send').onclick!();
-  assert.equal(paired.get('test-badge').textContent, 'STOPPED');
+  assert.equal(paired.get('test-badge').textContent, 'Stopped');
   assert.deepEqual(paired.actions, ['start', 'stop', 'send']);
 });
 
@@ -1186,16 +1232,9 @@ for (const minutes of [0.5, 1.5])
     );
   });
 
-test('built-in Help is collapsed, local, structured and covers everyday use', () => {
+test('built-in Help stays collapsed and retains every localized topic without static English fallback', () => {
   const html = readFileSync('settings/index.html', 'utf8');
-  const start = html.indexOf('<details id="help"');
-  const end = html.indexOf('<p id="message"', start);
-  assert.ok(start >= 0 && end > start);
-  const help = html.slice(start, end);
-  const plain = help.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-  const opening = help.match(/^<details\b[^>]*>/)![0];
-  assert.doesNotMatch(opening, /\bopen(?:\s|=|>)/);
-  assert.match(help, /<summary>How to use Data Watchdog<\/summary>/);
+  assert.match(html, /<details id="help" class="secondary help-content">/);
   for (const topic of [
     'basics',
     'quick-start',
@@ -1208,40 +1247,38 @@ test('built-in Help is collapsed, local, structured and covers everyday use', ()
     'troubleshooting',
     'limitations',
   ])
-    assert.match(help, new RegExp(`id="help-${topic}"`));
-  assert.match(help, /Quick start/);
-  assert.match(help, /<ol>/);
-  for (const method of [
-    'Device activity',
-    'Last data received',
-    'Flow confirmation',
-  ])
-    assert.ok(plain.includes(method));
-  for (const state of [
-    'WARMING_UP',
-    'HEALTHY',
-    'SUSPECTED_STALE',
-    'DEVICE_STALE',
-    'RECOVERING',
-    'DISABLED',
-    'MISSING',
-    'UNKNOWN',
-  ])
-    assert.ok(help.includes(`<dt>${state}</dt>`));
-  for (const term of [
-    'Any watchdog incident started',
-    'Any watchdog incident recovered',
-    'Send a push notification',
-    'Start heartbeat',
-    'Stop',
-    'Send once',
-    'STOPPED',
-  ])
-    assert.ok(plain.includes(term));
-  assert.match(plain, /Technical note is optional/);
-  assert.match(plain, /does not affect detection/);
-  assert.match(plain, /21\.3 °C/);
-  assert.doesNotMatch(help, /https?:\/\/|<iframe|<script/);
+    assert.match(html, new RegExp(`id="help-${topic}"`));
+  assert.doesNotMatch(
+    html,
+    /Know when your sources|How to use Data Watchdog|<iframe/,
+  );
+  for (const language of ['nl', 'en']) {
+    const locale = JSON.parse(
+      readFileSync(`locales/${language}.json`, 'utf8'),
+    ).settings;
+    const plain = Object.entries(locale)
+      .filter(([key]) => key.startsWith('help') || key.endsWith('Detail'))
+      .map(([, value]) => value)
+      .join(' ');
+    for (const phrase of [
+      'Any watchdog incident started',
+      'Any watchdog incident recovered',
+      'Homey',
+      'Data Watchdog',
+      language === 'nl' ? '21,3 °C' : '21.3 °C',
+    ])
+      assert.ok(plain.includes(phrase), phrase);
+    assert.match(
+      plain,
+      language === 'nl'
+        ? /beïnvloedt de detectie niet/
+        : /does not affect detection/,
+    );
+    assert.match(
+      plain,
+      language === 'nl' ? /buiten die Homey/ : /outside that Homey/,
+    );
+  }
 });
 
 test('standalone user guide is linked from README and covers setup, notifications, troubleshooting and limitations', () => {
@@ -1452,4 +1489,356 @@ test('saved encoding mismatch warns without changing the stored selection or pre
     f.saved().monitors[0].strategy,
     f.initial.monitors[0].strategy,
   );
+});
+
+for (const language of ['nl', 'en']) {
+  test(`${language}: complete Settings copy covers help, diagnostics, empty states, errors and the focused setup`, async () => {
+    const f = await ui({ language, adding: true, paired: true });
+    assert.equal(f.language(), language);
+    assert.equal(f.get('settings-root').hidden, false);
+    assert.equal(f.get('monitor-setup').hidden, true);
+    assert.equal(f.get('help').open, false);
+    assert.equal(f.get('diagnostics').open, false);
+    assert.equal(
+      f.get('monitor-count').textContent,
+      language === 'nl' ? '0 van 0 bronnen actief' : '0 of 0 sources active',
+    );
+    assert.equal(f.get('monitors-empty').hidden, false);
+    assert.equal(f.get('monitor-summary').hidden, true);
+    assert.equal(f.get('monitors-title').textContent, 'Monitors');
+    assert.equal(
+      f.get('help-toggle').textContent,
+      language === 'nl' ? 'Hulp' : 'Help',
+    );
+    assert.equal(
+      f.get('observer-title').textContent,
+      language === 'nl' ? 'Status van de bewaking' : 'Observation status',
+    );
+    assert.match(
+      f.text('integration-status'),
+      language === 'nl' ? /nog geen integraties/ : /No monitored integrations/,
+    );
+    assert.equal(
+      f.get('test-badge').textContent,
+      language === 'nl' ? 'Gestopt' : 'Stopped',
+    );
+    assert.match(
+      f.text('test-summary'),
+      language === 'nl'
+        ? /Laatste bevestiging Nog niet/
+        : /Last confirmation Never/,
+    );
+    assert.match(
+      f.text('observer-summary'),
+      language === 'nl' ? /Verbinding Verbonden/ : /Connection Connected/,
+    );
+    if (language === 'nl')
+      assert.doesNotMatch(
+        f.translations().join(' '),
+        /How to use|Know when your sources|Choosing a|Could not|Local self-test|Never|Unknown|Understanding monitor/,
+      );
+    f.get('help-toggle').onclick!();
+    assert.equal(f.get('help').open, true);
+    assert.equal(f.get('help-toggle').getAttribute('aria-expanded'), 'true');
+    assert.equal(f.get('help-summary').focused, true);
+    f.get('help').onkeydown!({ key: 'Escape', preventDefault() {} });
+    assert.equal(f.get('help').open, false);
+    assert.equal(f.get('help-toggle').focused, true);
+    f.choose('device-last-seen');
+    assert.equal(f.get('add-monitor').className, '');
+    assert.equal(f.get('method-description').hidden, false);
+    assert.equal(
+      f.get('method-description').textContent,
+      language === 'nl'
+        ? 'Controleert of Homey het apparaat recent nog heeft gezien.'
+        : 'Checks whether Homey has seen the device recently.',
+    );
+    f.choose('manual');
+    assert.match(
+      f.get('method-description').textContent,
+      language === 'nl' ? /^Laat een Homey Flow/ : /^Let a Homey Flow/,
+    );
+    f.select('d');
+    assert.equal(f.get('device-picker').hidden, true);
+    assert.equal(f.get('device-settings').open, false);
+    f.statusFail();
+    await f.get('refresh').onclick!();
+    assert.equal(
+      f.get('message').textContent,
+      language === 'nl'
+        ? 'De status kon niet worden vernieuwd. Probeer het opnieuw.'
+        : 'Could not refresh the status. Try again.',
+    );
+    assert.equal(f.get('request-details').hidden, false);
+    assert.equal(f.get('request-details').open, false);
+    assert.equal(f.get('request-error-detail').textContent, 'Unavailable');
+    assert.equal(f.puts.length, 0);
+  });
+
+  test(`${language}: every state is localized on the row, with the exact state restricted to technical details`, async () => {
+    const states = [
+      'WARMING_UP',
+      'HEALTHY',
+      'SUSPECTED_STALE',
+      'DEVICE_STALE',
+      'RECOVERING',
+      'DISABLED',
+      'MISSING',
+      'UNKNOWN',
+    ];
+    const labels =
+      language === 'nl'
+        ? [
+            'Opstarten',
+            'Gezond',
+            'Update vertraagd',
+            'Geen gegevens',
+            'Herstelt',
+            'Uitgeschakeld',
+            'Ontbreekt',
+            'Onbekend',
+          ]
+        : [
+            'Starting',
+            'Healthy',
+            'Update delayed',
+            'No data',
+            'Recovering',
+            'Disabled',
+            'Missing',
+            'Unknown',
+          ];
+    const monitors = states.map((state) => ({
+      ...initialConfig().monitors[0],
+      id: state,
+      deviceId: state,
+      enabled: state !== 'DISABLED',
+    }));
+    const f = await ui({
+      language,
+      monitors,
+      runtimeStates: Object.fromEntries(states.map((state) => [state, state])),
+    });
+    assert.equal(
+      f.get('monitor-count').textContent,
+      language === 'nl' ? '7 van 8 bronnen actief' : '7 of 8 sources active',
+    );
+    for (const [index, row] of f.get('monitors').children.entries()) {
+      assert.equal(row.children[0].children[1].textContent, labels[index]);
+      assert.equal(
+        row.children[0].children[1].getAttribute('data-state'),
+        states[index],
+      );
+      const detail = descendants(row).find(
+        (e) => e.className === 'monitor-technical',
+      )!;
+      assert.equal(detail.open, false);
+      assert.ok(text(detail).includes(states[index]));
+      assert.doesNotMatch(
+        visibleText(row),
+        /WARMING_UP|DEVICE_STALE|SUSPECTED_STALE/,
+      );
+    }
+    assert.deepEqual(f.saved().monitors, monitors);
+  });
+
+  test(`${language}: time presentation follows the UI locale, and exact ISO remains in technical details`, async () => {
+    const at = Date.parse('2026-09-28T17:16:00Z');
+    const f = await ui({ language, lastDeliveryAt: at });
+    const row = f.get('monitors').children[0];
+    const last = descendants(row).find((e) => e.className === 'monitor-last')!;
+    const expected = new Date(at).toLocaleString(language, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    assert.ok(last.textContent.endsWith(expected));
+    assert.doesNotMatch(last.textContent, /T17:16|\.000Z/);
+    assert.match(
+      text(descendants(row).find((e) => e.className === 'monitor-technical')!),
+      /2026-09-28T17:16:00\.000Z/,
+    );
+    const missing = await ui({ language, lastDeliveryAt: null });
+    assert.match(
+      text(missing.get('monitors')),
+      language === 'nl' ? /Nog niet bevestigd/ : /Not confirmed yet/,
+    );
+  });
+
+  test(`${language}: test-source failures are explained locally with raw diagnostics kept secondary`, async () => {
+    for (const sourceError of [
+      'Test heartbeat failed; source stopped',
+      'Native lastSeenAt update failed; timestamp/manual remain available',
+      'Unexpected backend error',
+    ]) {
+      const f = await ui({
+        language,
+        paired: true,
+        sourceError,
+        observerState: 'persistence-error',
+        restoreState: 'rejected',
+        integrationState: 'DEGRADED',
+      });
+      assert.equal(f.get('test-error-details').hidden, false);
+      assert.equal(f.get('test-error-details').open, false);
+      assert.equal(f.get('test-error-detail').textContent, sourceError);
+      assert.notEqual(f.get('test-message').textContent, sourceError);
+      if (language === 'nl') {
+        assert.doesNotMatch(
+          f.get('test-message').textContent,
+          /failed|Unexpected|Native|heartbeat/,
+        );
+        assert.match(f.text('observer-summary'), /kan niet worden opgeslagen/);
+        assert.match(f.text('integration-status'), /Aandacht nodig/);
+      }
+    }
+  });
+}
+
+test('More uses native keyboard disclosure, exclusive expansion and focus recovery for every management action', async () => {
+  const original = initialConfig().monitors[0];
+  const other = { ...original, id: 'other', deviceId: 'other' };
+  const f = await ui({ monitors: [original, other] });
+  const overflow = (index = 0) =>
+    descendants(f.get('monitors').children[index]).find(
+      (e) => e.className === 'monitor-more',
+    )!;
+  const open = (index = 0) => {
+    const more = overflow(index);
+    more.open = true;
+    more.ontoggle!();
+    return more;
+  };
+  assert.equal(overflow().tag, 'details');
+  assert.equal(overflow().open, false);
+  assert.equal(
+    descendants(overflow()).find((e) => e.className === 'monitor-technical')!
+      .open,
+    false,
+  );
+  assert.doesNotMatch(
+    visibleText(f.get('monitors')),
+    /Technical details|Disable|Remove/,
+  );
+  const summary = overflow().children[0];
+  assert.equal(summary.tag, 'summary');
+  assert.equal(
+    summary.getAttribute('aria-label'),
+    'More actions for Simulation',
+  );
+  assert.equal(summary.getAttribute('aria-expanded'), 'false');
+  assert.equal(
+    summary.getAttribute('aria-controls'),
+    overflow().children[1].id,
+  );
+  open();
+  assert.equal(summary.getAttribute('aria-expanded'), 'true');
+  open(1);
+  assert.equal(overflow().open, false);
+  assert.equal(summary.getAttribute('aria-expanded'), 'false');
+  let prevented = false;
+  overflow(1).onkeydown!({
+    key: 'Escape',
+    preventDefault() {
+      prevented = true;
+    },
+  });
+  assert.ok(prevented);
+  assert.equal(overflow(1).open, false);
+  assert.equal(overflow(1).children[0].focused, true);
+  const more = open();
+  more.onfocusout!({ relatedTarget: more.children[1].children[0] });
+  assert.equal(more.open, true);
+  more.onfocusout!({ relatedTarget: f.get('refresh') });
+  assert.equal(more.open, false);
+  await findButton(open(), 'Disable')!.onclick!();
+  assert.equal(overflow().children[0].focused, true);
+  assert.equal(f.saved().monitors[0].enabled, false);
+  assert.equal(overflow().open, false);
+  await findButton(open(), 'Enable')!.onclick!();
+  assert.deepEqual(f.saved().monitors, [original, other]);
+  const remove = findButton(open(), 'Remove')!;
+  assert.equal(remove.className, 'danger');
+  await remove.onclick!();
+  assert.deepEqual(f.saved().monitors, [other]);
+  assert.equal(findButton(f.get('monitors'), 'Edit')!.focused, true);
+  await findButton(open(), 'Remove')!.onclick!();
+  assert.equal(f.get('add-monitor').focused, true);
+  assert.equal(f.get('monitors-empty').hidden, false);
+});
+
+test('filter chips preserve filtering, pressed state and keyboard focus', async () => {
+  const original = initialConfig().monitors[0];
+  const f = await ui({
+    monitors: [
+      original,
+      {
+        ...original,
+        id: 'manual',
+        deviceId: 'other',
+        strategy: { kind: 'manual' },
+      },
+    ],
+  });
+  const chips = () => f.get('monitor-summary').children;
+  assert.ok(
+    chips().every((c) => c.className === 'filter-chip' && c.tag === 'button'),
+  );
+  assert.equal(chips()[0].getAttribute('aria-pressed'), 'true');
+  const flow = chips().find((c) => c.getAttribute('data-filter') === 'manual')!;
+  assert.equal(
+    flow.getAttribute('aria-label'),
+    'Flow confirmation: 1 monitors',
+  );
+  flow.onclick!();
+  const selected = chips().find(
+    (c) => c.getAttribute('data-filter') === 'manual',
+  )!;
+  assert.equal(selected.getAttribute('aria-pressed'), 'true');
+  assert.equal(selected.focused, true);
+  assert.equal(f.get('monitors').children.length, 1);
+  assert.equal(
+    f.get('monitors').children[0].getAttribute('data-monitor-id'),
+    'manual',
+  );
+  chips()[0].onclick!();
+  assert.equal(f.get('monitors').children.length, 2);
+  assert.equal(f.puts.length, 0);
+});
+
+test('all static copy is locale-owned; compact responsive layout supports long labels without fixed card widths', async () => {
+  const html = readFileSync('settings/index.html', 'utf8');
+  const css = readFileSync('settings/settings.css', 'utf8');
+  assert.equal(html.replace(/<[^>]*>/g, '').trim(), '');
+  assert.doesNotMatch(html, /class="card"|Data Watchdog<\/h1>|method-help/);
+  assert.match(css, /--accent: #245b68;/i);
+  assert.doesNotMatch(css, /#175ddc|#2563df|\.actions button\s*\{\s*flex-grow/);
+  assert.match(css, /\.filter-chips\s*\{[^}]*flex-wrap: wrap/);
+  assert.match(
+    css,
+    /\.monitor-heading h3\s*\{[^}]*min-width: 0;[^}]*overflow-wrap: anywhere/,
+  );
+  assert.match(css, /@media \(max-width: 560px\)/);
+  assert.match(css, /@media \(pointer: coarse\)/);
+  const monitors = Array.from({ length: 10 }, (_, index) => ({
+    ...initialConfig().monitors[0],
+    id: `m${index}`,
+    deviceId: `d${index}`,
+    deviceName: `Lange apparaatnaam ${'ontvangst'.repeat(30)}`,
+  }));
+  const f = await ui({ language: 'nl', monitors });
+  assert.equal(f.get('monitors').children.length, 10);
+  assert.ok(
+    f
+      .get('monitors')
+      .children.every(
+        (row) =>
+          row.className === 'monitor-row' &&
+          !row.children.some((c) => c.className === 'card'),
+      ),
+  );
+  assert.equal(f.get('monitor-count').textContent, '10 van 10 bronnen actief');
+  assert.deepEqual(f.saved().monitors, monitors);
 });

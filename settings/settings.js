@@ -12,6 +12,7 @@ let monitorFilter = null;
 let draftSequence = 0;
 let errors = {};
 let sharedErrors = {};
+let monitorControls = new Map();
 let latestStatus = { monitors: [], integrations: [] };
 const kinds = ['device-last-seen', 'timestamp-capability', 'manual'];
 const fields = [
@@ -45,6 +46,8 @@ function localizeSetup() {
   );
   for (const element of document.querySelectorAll('[data-i18n]'))
     element.textContent = homey.__(element.getAttribute('data-i18n'));
+  document.documentElement.lang = t('dateLocale');
+  el('settings-root').hidden = false;
 }
 const el = (id) => document.getElementById(id);
 const api = (method, path, body) =>
@@ -72,25 +75,49 @@ function option(value, title) {
   item.value = value;
   return item;
 }
+function stateLabel(state) {
+  const known = [
+    'WARMING_UP',
+    'HEALTHY',
+    'SUSPECTED_STALE',
+    'DEVICE_STALE',
+    'RECOVERING',
+    'DISABLED',
+    'MISSING',
+    'UNKNOWN',
+    'INTEGRATION_STALE',
+    'DEGRADED',
+    'RUNNING',
+    'STOPPED',
+  ];
+  return t(`states.${known.includes(state) ? state : 'UNKNOWN'}`);
+}
 function badge(state) {
-  const item = node('span', state, 'badge');
+  const item = node('span', stateLabel(state), 'badge');
   item.setAttribute('data-state', state);
   return item;
 }
 function date(value, exact = false) {
-  if (value == null || value === '') return 'Never';
+  if (value == null || value === '') return t('never');
   const time = new Date(value);
   return Number.isNaN(time.getTime())
-    ? 'Unknown'
+    ? t('unknown')
     : exact
       ? time.toISOString()
-      : time.toLocaleString(undefined, {
+      : time.toLocaleString(t('dateLocale'), {
+          year: 'numeric',
           month: 'short',
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-          second: '2-digit',
         });
+}
+function reportError(target, key, error, tokens) {
+  announce(target, t(key, tokens), true);
+  const test = target === 'test-message';
+  el(test ? 'test-error-details' : 'request-details').hidden = false;
+  el(test ? 'test-error-detail' : 'request-error-detail').textContent =
+    errorText(error);
 }
 function rows(target, entries) {
   target.replaceChildren(
@@ -123,6 +150,13 @@ function selectedDevice() {
 }
 function timestampVisibility() {
   el('timestamp-fields').hidden = kind() !== 'timestamp-capability';
+  const helpKey = {
+    'device-last-seen': 'activityHelp',
+    'timestamp-capability': 'timestampHelp',
+    manual: 'manualHelp',
+  }[kind()];
+  el('method-description').hidden = !helpKey;
+  el('method-description').textContent = helpKey ? t(helpKey) : '';
 }
 
 function sources() {
@@ -147,16 +181,7 @@ function timestampDescription(capability) {
   const description = node('span');
   description.append(node('strong', capability.title));
   if (capability.timestampCandidate) {
-    const time = new Date(capability.timestampCandidate.at).toLocaleString(
-      t('dateLocale'),
-      {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
+    const time = date(capability.timestampCandidate.at);
     description.append(node('small', t('timestampPreview', { time })));
   }
   description.append(node('small', capability.id, 'capability-id'));
@@ -212,6 +237,7 @@ function formMode() {
   const picking = !el('device-picker').hidden;
   el('monitor-setup').hidden = !formOpen;
   el('add-monitor').disabled = saving || !config || editing;
+  el('add-monitor').className = formOpen ? '' : 'primary';
   el('add-monitor').setAttribute('aria-expanded', String(formOpen));
   el('close-setup').hidden = editing || picking;
   el('close-setup').disabled = saving;
@@ -946,6 +972,13 @@ function renderMonitorSummary() {
   const monitors = config?.monitors ?? [];
   if (!monitors.some((m) => m.strategy.kind === monitorFilter))
     monitorFilter = null;
+  el('monitor-count').textContent = t(
+    monitors.length === 1 ? 'sourceCountOne' : 'sourceCount',
+    {
+      active: monitors.filter((m) => m.enabled).length,
+      total: monitors.length,
+    },
+  );
   el('monitor-summary').hidden = monitors.length === 0;
   el('monitor-summary').replaceChildren(
     ...[null, ...kinds].map((method) => {
@@ -954,27 +987,43 @@ function renderMonitorSummary() {
         : monitors.length;
       const button = node(
         'button',
-        `${method ? copy.methods[method] : t('all')} · ${count}`,
+        `${method ? t(`filters.${method}`) : t('all')} · ${count}`,
+        'filter-chip',
       );
       button.type = 'button';
+      button.setAttribute('data-filter', method ?? 'all');
+      button.setAttribute(
+        'aria-label',
+        t('filterLabel', {
+          method: method ? copy.methods[method] : t('all'),
+          count,
+        }),
+      );
       button.setAttribute('aria-pressed', String(monitorFilter === method));
       button.disabled = count === 0;
       button.onclick = () => {
         monitorFilter = method;
         renderMonitors();
+        Array.from(el('monitor-summary').children)
+          .find(
+            (item) => item.getAttribute('data-filter') === (method ?? 'all'),
+          )
+          ?.focus();
       };
       return button;
     }),
   );
 }
 function renderMonitors() {
+  monitorControls = new Map();
   renderMonitorSummary();
   el('monitors-empty').hidden = !!config?.monitors.length;
   el('monitors').replaceChildren(
     ...(config?.monitors ?? [])
       .filter((m) => !monitorFilter || m.strategy.kind === monitorFilter)
-      .map((monitor) => {
-        const card = node('li', '', 'card monitor-card');
+      .map((monitor, index) => {
+        const card = node('li', '', 'monitor-row');
+        card.setAttribute('data-monitor-id', monitor.id);
         const runtime = latestStatus.monitors.find(
           (m) => m.id === monitor.id,
         )?.runtime;
@@ -990,25 +1039,39 @@ function renderMonitors() {
             t('monitorMeta', {
               source: monitor.sourceAppName,
               method: copy.methods[monitor.strategy.kind],
-              minutes: monitor.staleTimeoutMs / 60000,
+              minutes: (monitor.staleTimeoutMs / 60000).toLocaleString(
+                t('dateLocale'),
+              ),
             }),
             'monitor-meta',
           ),
+        );
+        const footer = node('div', '', 'monitor-footer');
+        footer.append(
           node(
             'p',
-            t('lastUpdate', {
-              time:
-                runtime?.lastDeliveryAt == null
-                  ? t('notConfirmed')
-                  : date(runtime.lastDeliveryAt),
-            }),
+            t(
+              monitor.strategy.kind === 'device-last-seen'
+                ? 'lastActivity'
+                : 'lastUpdate',
+              {
+                time:
+                  runtime?.lastDeliveryAt == null
+                    ? t('notConfirmed')
+                    : date(runtime.lastDeliveryAt),
+              },
+            ),
             'monitor-last',
           ),
         );
-        const details = node('details');
+        const details = node('details', '', 'monitor-technical');
         details.append(node('summary', t('details')));
         const technical = node('dl');
         rows(technical, [
+          [
+            t('internalState'),
+            monitor.enabled ? (runtime?.state ?? 'UNKNOWN') : 'DISABLED',
+          ],
           [t('monitorId'), monitor.id],
           [t('appId'), monitor.sourceAppId],
           [t('deviceId'), monitor.deviceId],
@@ -1027,13 +1090,48 @@ function renderMonitors() {
           [t('technicalNote'), monitor.sourceContract || t('none')],
         ]);
         details.append(technical);
-        card.append(details);
-        const actions = node('div', '', 'actions monitor-actions');
+        const actions = node('div', '', 'monitor-actions');
         const edit = node('button', t('edit'));
         edit.type = 'button';
         edit.disabled = saving;
         edit.onclick = () => editMonitor(monitor);
         actions.append(edit);
+        const more = node('details', '', 'monitor-more');
+        const moreToggle = node('summary', '⋯');
+        moreToggle.setAttribute(
+          'aria-label',
+          t('moreFor', { name: monitor.deviceName }),
+        );
+        moreToggle.setAttribute('aria-expanded', 'false');
+        const extra = node('div', '', 'more-actions');
+        extra.id = `monitor-actions-${index}`;
+        moreToggle.setAttribute('aria-controls', extra.id);
+        more.append(moreToggle, extra);
+        monitorControls.set(monitor.id, { edit, more, moreToggle });
+        more.ontoggle = () => {
+          moreToggle.setAttribute('aria-expanded', String(more.open));
+          if (more.open)
+            for (const controls of monitorControls.values()) {
+              if (controls.more !== more) {
+                controls.more.open = false;
+                controls.moreToggle.setAttribute('aria-expanded', 'false');
+              }
+            }
+        };
+        more.onkeydown = (event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            more.open = false;
+            moreToggle.setAttribute('aria-expanded', 'false');
+            moreToggle.focus();
+          }
+        };
+        more.onfocusout = (event) => {
+          if (!more.contains(event.relatedTarget)) {
+            more.open = false;
+            moreToggle.setAttribute('aria-expanded', 'false');
+          }
+        };
         for (const [label, action] of [
           [monitor.enabled ? t('disable') : t('enable'), 'toggle'],
           [t('remove'), 'remove'],
@@ -1057,43 +1155,58 @@ function renderMonitors() {
                     ),
             };
             try {
-              await writeConfig(next);
-            } catch (error) {
+              const refreshed = await writeConfig(next);
               announce(
                 'message',
-                t('updateFailed', {
-                  name: monitor.deviceName,
-                  error: errorText(error),
-                }),
-                true,
+                t(
+                  action === 'remove'
+                    ? 'removedMonitor'
+                    : monitor.enabled
+                      ? 'disabledMonitor'
+                      : 'enabledMonitor',
+                  { name: monitor.deviceName },
+                ) + (refreshed ? '' : t('refreshSuffix')),
               );
+            } catch (error) {
+              reportError('message', 'updateFailed', error, {
+                name: monitor.deviceName,
+              });
               el('message').scrollIntoView({ block: 'center' });
+            } finally {
+              (
+                monitorControls.get(monitor.id)?.moreToggle ??
+                monitorControls.values().next().value?.edit ??
+                el('add-monitor')
+              ).focus();
             }
           };
-          actions.append(button);
+          extra.append(button);
         }
-        card.append(actions);
+        extra.append(details);
+        actions.append(more);
+        footer.append(actions);
+        card.append(footer);
         return card;
       }),
   );
 }
 function renderObserver(status) {
   const observers = {
-    observing: 'Connected',
-    starting: 'Starting',
-    disconnected: 'Disconnected',
-    unavailable: 'Unavailable',
-    'persistence-error': 'Unable to save monitoring state',
+    observing: t('observerConnected'),
+    starting: t('states.WARMING_UP'),
+    disconnected: t('observerDisconnected'),
+    unavailable: t('unavailable'),
+    'persistence-error': t('observerPersistenceError'),
   };
   const restores = {
-    new: 'New session',
-    restored: 'Restored',
-    rejected: 'Previous state incompatible; observing again',
+    new: t('restoreNew'),
+    restored: t('restoreRestored'),
+    rejected: t('restoreRejected'),
   };
   rows(el('observer-summary'), [
-    ['Observer', observers[status.observer] ?? 'Unknown'],
-    ['Dispatch failures', status.dispatchFailures ?? 0],
-    ['Restore', restores[status.restore] ?? 'Unknown'],
+    [t('observer'), observers[status.observer] ?? t('unknown')],
+    [t('dispatchFailures'), status.dispatchFailures ?? 0],
+    [t('restore'), restores[status.restore] ?? t('unknown')],
   ]);
   el('metadata-warning').hidden = !status.metadataIncomplete;
   el('integration-status').replaceChildren(
@@ -1110,9 +1223,7 @@ function renderObserver(status) {
     }),
   );
   if (!status.integrations?.length)
-    el('integration-status').append(
-      node('li', 'No monitored integrations yet.'),
-    );
+    el('integration-status').append(node('li', t('emptyIntegrations')));
   el('status').textContent = JSON.stringify(status, null, 2);
 }
 function renderTestSource(source) {
@@ -1121,40 +1232,50 @@ function renderTestSource(source) {
   el('test-badge').hidden = !source.paired;
   if (!source.paired) return;
   const state = source.running ? 'RUNNING' : 'STOPPED';
-  el('test-badge').textContent = state;
+  el('test-badge').textContent = stateLabel(state);
   el('test-badge').setAttribute('data-state', state);
   rows(el('test-summary'), [
-    ['Interval', `${source.intervalMs / 1000} s`],
-    ['Last generated', date(source.lastGeneratedAt)],
+    [t('interval'), t('secondsValue', { seconds: source.intervalMs / 1000 })],
+    [t('lastGenerated'), date(source.lastGeneratedAt)],
   ]);
   rows(el('test-details'), [
     [
-      'Native lastSeenAt',
+      t('nativeLastSeen'),
       {
-        'not-sent': 'Not sent',
-        sent: 'Sent',
-        failed: 'Failed',
-        unavailable: 'Unavailable',
-      }[source.nativeLastSeen] ?? 'Unknown',
+        'not-sent': t('nativeNotSent'),
+        sent: t('nativeSent'),
+        failed: t('nativeFailed'),
+        unavailable: t('unavailable'),
+      }[source.nativeLastSeen] ?? t('unknown'),
     ],
-    ['Manual deliveries', source.manualDeliveries ?? 0],
-    ['Exact last generated', date(source.lastGeneratedAt, true)],
-    ['Restart behavior', 'Stopped'],
+    [t('manualDeliveries'), source.manualDeliveries ?? 0],
+    [t('exactGenerated'), date(source.lastGeneratedAt, true)],
+    [t('restartBehavior'), t('states.STOPPED')],
   ]);
   el('test-start').disabled = source.running;
   el('test-stop').disabled = !source.running;
   el('test-send').disabled = false;
-  announce('test-message', source.lastError ?? '', !!source.lastError);
+  if (source.lastError) {
+    const known = {
+      'Test heartbeat failed; source stopped': 'testSourceStopped',
+      'Native lastSeenAt update failed; timestamp/manual remain available':
+        'testNativeFailed',
+    };
+    reportError(
+      'test-message',
+      known[source.lastError] ?? 'testSourceError',
+      source.lastError,
+    );
+  } else {
+    announce('test-message', '');
+    el('test-error-details').hidden = true;
+  }
 }
 async function loadTestSource() {
   try {
     renderTestSource(await api('GET', '/test-source', null));
   } catch (error) {
-    announce(
-      'test-message',
-      `Could not refresh the local test source: ${errorText(error)}`,
-      true,
-    );
+    reportError('test-message', 'testRefreshFailed', error);
   }
 }
 async function load() {
@@ -1184,6 +1305,24 @@ function onHomeyReady(Homey) {
   homey = Homey;
   localizeSetup();
   homey.ready();
+  el('help-toggle').onclick = () => {
+    el('help').open = !el('help').open;
+    el('help-toggle').setAttribute('aria-expanded', String(el('help').open));
+    if (el('help').open) {
+      el('help').scrollIntoView({ block: 'start', behavior: 'auto' });
+      el('help-summary').focus();
+    }
+  };
+  el('help').ontoggle = () =>
+    el('help-toggle').setAttribute('aria-expanded', String(el('help').open));
+  el('help').onkeydown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      el('help').open = false;
+      el('help-toggle').setAttribute('aria-expanded', 'false');
+      el('help-toggle').focus();
+    }
+  };
   el('monitor-summary').setAttribute('aria-label', t('filterMethods'));
   formMode();
   el('add-monitor').onclick = () => {
@@ -1248,12 +1387,9 @@ function onHomeyReady(Homey) {
     try {
       await load();
       announce('message', t('refreshed'));
+      el('request-details').hidden = true;
     } catch (error) {
-      announce(
-        'message',
-        t('refreshFailed', { error: errorText(error) }),
-        true,
-      );
+      reportError('message', 'refreshFailed', error);
     }
   };
   for (const action of ['start', 'stop', 'send'])
@@ -1264,15 +1400,11 @@ function onHomeyReady(Homey) {
         renderTestSource(await api('POST', '/test-source', { action }));
       } catch (error) {
         await loadTestSource();
-        announce(
-          'test-message',
-          `Test heartbeat command failed: ${errorText(error)}`,
-          true,
-        );
+        reportError('test-message', 'testCommandFailed', error);
       }
     };
   load().catch((error) => {
-    announce('message', t('loadFailed', { error: errorText(error) }), true);
+    reportError('message', 'loadFailed', error);
     el('refresh').disabled = false;
   });
 }

@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -7,302 +8,63 @@
     <link rel="stylesheet" href="settings.css" />
   </head>
   <body>
-    <main>
-      <header>
-        <h1>Data Watchdog</h1>
-        <p>
-          Know when your sources stop reporting. An unchanged measurement alone
-          is not a sign of failure.
-        </p>
-      </header>
-      <details id="help" class="card">
-        <summary>How to use Data Watchdog</summary>
-        <section id="help-basics" aria-labelledby="help-basics-title">
-          <h3 id="help-basics-title">What does Data Watchdog do?</h3>
-          <p>
-            Data Watchdog checks whether a device or integration still shows
-            valid activity or data delivery. It does not simply check whether a
-            measurement changes: a temperature can stay at 21.3 °C while the
-            sensor works perfectly.
-          </p>
-        </section>
-        <section id="help-quick-start" aria-labelledby="help-quick-start-title">
-          <h3 id="help-quick-start-title">Quick start</h3>
-          <ol>
-            <li data-i18n="settings.helpStart">
-              Choose Add monitor above the list, then choose how to check for
-              updates.
-            </li>
-            <li>
-              Open Select devices, choose one or more sources, then confirm with
-              Use selection.
-            </li>
-            <li>Enter how often updates are normally expected.</li>
-            <li>
-              Set the timing once for your selection. Open Adjust settings per
-              device only when a source needs different timing.
-            </li>
-            <li data-i18n="settings.helpSave">
-              Choose Add monitors. Fields needing attention will be highlighted.
-            </li>
-            <li>
-              For phone notifications, create a Homey Flow using Any watchdog
-              incident started.
-            </li>
-          </ol>
-        </section>
-        <details id="help-methods">
-          <summary data-i18n="settings.helpMethods">
-            Choosing a monitoring method
-          </summary>
-          <h3 data-i18n="settings.methods.device-last-seen">Device activity</h3>
-          <p data-i18n="settings.activityHelp">
-            Checks whether Homey has seen the device recently.
-          </p>
-          <p data-i18n="settings.activityDetail">
-            This proves activity, not necessarily a new measurement or
-            successful delivery.
-          </p>
-          <h3 data-i18n="settings.methods.timestamp-capability">
-            Last data received
-          </h3>
-          <p data-i18n="settings.timestampHelp">
-            Use this when the device or app keeps track of when new data was
-            last received.
-          </p>
-          <p data-i18n="settings.dataDetail">
-            The selected field must itself contain a date/time value updated by
-            the source. A measurement value or its lastUpdated metadata is not a
-            substitute. If several fields are selected, a new time in any one
-            counts as an update.
-          </p>
-          <h3 data-i18n="settings.methods.manual">Flow confirmation</h3>
-          <p data-i18n="settings.manualHelp">
-            Let a Homey Flow confirm after a successful update that everything
-            is still working.
-          </p>
-          <p data-i18n="settings.flowDetail">
-            The confirmation must follow a real successful update. A blind
-            repeating timer does not prove that the source works. Existing API
-            confirmations remain supported.
-          </p>
-        </details>
-        <details id="help-timing">
-          <summary>Choosing the timing</summary>
-          <p>
-            <strong>Expected update interval:</strong> how often should the
-            source normally report activity or new data?
-          </p>
-          <p>
-            <strong>Consider stale after:</strong> how long may no valid update
-            arrive before the source is treated as stale?
-          </p>
-          <p data-i18n="settings.helpTimingExample">
-            For updates every 5 minutes, you might expect an update every 5
-            minutes and alert after 15 minutes. Allow some margin for delays.
-            The timeout must be at least the expected interval. Device activity
-            and Last data received require at least 2 minutes.
-          </p>
-          <p>
-            The input arrows move in half-minute steps: 0.5 is 30 seconds; 1.5
-            is 90 seconds. A short confirmation period means an incident
-            notification may follow slightly after the timeout. Recovery also
-            needs to remain stable before the incident closes.
-          </p>
-        </details>
-        <details id="help-statuses">
-          <summary>Understanding monitor statuses</summary>
-          <dl>
-            <dt>WARMING_UP</dt>
-            <dd>
-              Waiting for a fresh update after setup, restart or a change to how
-              freshness is checked.
-            </dd>
-            <dt>HEALTHY</dt>
-            <dd>Recent valid activity or data delivery has been confirmed.</dd>
-            <dt>SUSPECTED_STALE</dt>
-            <dd>
-              The signal is overdue. Data Watchdog waits briefly before
-              declaring an incident.
-            </dd>
-            <dt>DEVICE_STALE</dt>
-            <dd>
-              The device has missed the configured stale period and an incident
-              is active. It may be grouped with other devices from the same
-              integration.
-            </dd>
-            <dt>RECOVERING</dt>
-            <dd>
-              Fresh updates have returned; waiting for stable recovery before
-              closing the incident.
-            </dd>
-            <dt>DISABLED</dt>
-            <dd>Monitoring is turned off for this monitor.</dd>
-            <dt>MISSING</dt>
-            <dd>
-              The configured device or required timestamp field cannot currently
-              be found.
-            </dd>
-            <dt>UNKNOWN</dt>
-            <dd>
-              A reliable state cannot currently be determined, for example
-              because observation is unavailable.
-            </dd>
-          </dl>
-        </details>
-        <details id="help-notifications">
-          <summary>Getting phone notifications</summary>
-          <p>
-            Data Watchdog detects incidents; it does not automatically send
-            everyone a push notification. Create a Homey Flow to choose who
-            receives messages and which incidents to report.
-          </p>
-          <ol>
-            <li>
-              <strong>WHEN:</strong> Data Watchdog → Any watchdog incident
-              started.
-            </li>
-            <li>
-              <strong>THEN:</strong> Homey → Send a push notification. Choose
-              the recipient and message.
-            </li>
-          </ol>
-          <p>
-            For an optional recovery message, create a second Flow using Any
-            watchdog incident recovered. You can use the device and integration
-            information supplied by the trigger in your message. Avoid sending
-            the same notification from both a general incident trigger and a
-            device-specific trigger.
-          </p>
-          <p>
-            If several monitors from the same integration stop reporting
-            together, Data Watchdog can group them into one integration
-            incident.
-          </p>
-        </details>
-        <details id="help-self-test">
-          <summary>Using the optional Local self-test</summary>
-          <p>
-            Pair Data Watchdog Test Source (simulation) only if you want a safe
-            local test of stale detection, recovery and your notification Flows.
-            It does not control production devices and is not needed for daily
-            monitoring. Test incidents can send real notifications through your
-            existing watchdog Flows.
-          </p>
-          <ul>
-            <li>
-              <strong>Start heartbeat:</strong> sends a heartbeat now, then
-              every 30 seconds.
-            </li>
-            <li>
-              <strong>Stop:</strong> stops the heartbeat and freezes the test
-              timestamp.
-            </li>
-            <li>
-              <strong>Send once:</strong> sends one heartbeat without starting a
-              stopped simulator. An already running simulator stays running.
-            </li>
-            <li>
-              After an app restart, the simulator deliberately starts STOPPED.
-            </li>
-          </ul>
-          <p data-i18n="settings.helpFirstTest">
-            For a first test, monitor the test device with Last data received,
-            Last test heartbeat, ISO format, a 0.5-minute expected interval and
-            a 2-minute timeout.
-          </p>
-        </details>
-        <details id="help-advanced">
-          <summary>Editing and Technical note</summary>
-          <p>
-            Edit changes the existing monitor; Save changes keeps it, while
-            Cancel discards the draft. Changing the freshness method or timing
-            starts a new observation period. Disable pauses monitoring.
-          </p>
-          <p>
-            Technical note is optional. Use it to remember why you trust a
-            freshness signal. It does not affect detection or restart
-            monitoring.
-          </p>
-        </details>
-        <details id="help-troubleshooting">
-          <summary>If something does not look right</summary>
-          <p>
-            Use Refresh status. If WARMING_UP persists, check that the chosen
-            source is producing new updates. For MISSING, check the device and
-            timestamp field still exist. A normal rename alone does not remove a
-            monitor.
-          </p>
-          <p data-i18n="settings.helpMethodTrouble">
-            If Last data received never becomes HEALTHY, check the selected
-            field, format and whether its time moves forward. If Device activity
-            stays UNKNOWN, Homey may not provide a usable last-seen time.
-          </p>
-          <p>
-            If no phone notification arrives, check your incident Flow, its
-            conditions, recipient and Homey push permissions.
-          </p>
-        </details>
-        <details id="help-limitations">
-          <summary>Important limitations</summary>
-          <p>
-            Monitoring is only as trustworthy as the selected freshness signal.
-            A wrong time field can make an unhealthy source appear healthy. An
-            unchanged measurement is not proof of a fault, and activity is not
-            proof of new measurement data.
-          </p>
-          <p>
-            If the whole Homey stops running, Data Watchdog on that same Homey
-            cannot report its own outage. Monitoring the entire host requires a
-            separate solution outside that Homey; this app does not provide that
-            external monitoring.
-          </p>
-        </details>
-      </details>
-      <p id="message" role="status" aria-live="polite"></p>
+    <main id="settings-root" hidden>
       <section aria-labelledby="monitors-title">
-        <div class="section-heading">
-          <h2 id="monitors-title" data-i18n="settings.monitors">Monitors</h2>
+        <header class="monitor-header">
+          <div>
+            <h1 id="monitors-title" data-i18n="settings.monitors"></h1>
+            <p id="monitor-count" class="muted" aria-live="polite"></p>
+          </div>
           <div class="monitor-toolbar">
             <button
               id="add-monitor"
               type="button"
+              class="primary"
               aria-controls="monitor-setup"
               aria-expanded="false"
               data-i18n="settings.addMonitor"
-            >
-              + Add monitor
-            </button>
-            <button
-              id="refresh"
-              type="button"
-              data-i18n="settings.refreshStatus"
-            >
-              Refresh status
-            </button>
+            ></button>
+            <div class="utility-actions">
+              <button
+                id="refresh"
+                type="button"
+                data-i18n="settings.refreshStatus"
+              ></button
+              ><button
+                id="help-toggle"
+                type="button"
+                aria-controls="help"
+                aria-expanded="false"
+                data-i18n="settings.help"
+              ></button>
+            </div>
           </div>
-        </div>
+        </header>
+        <p id="message" role="status" aria-live="polite"></p>
+        <details id="request-details" hidden>
+          <summary data-i18n="settings.errorDetails"></summary>
+          <pre id="request-error-detail"></pre>
+        </details>
         <section
           id="monitor-setup"
-          class="card"
+          class="setup-surface"
           aria-labelledby="form-title"
           hidden
         >
           <div class="section-heading">
-            <h2 id="form-title">Add monitor</h2>
+            <h2 id="form-title" data-i18n="settings.newMonitors"></h2>
             <button
               id="close-setup"
               type="button"
               data-i18n="settings.closeSetup"
-            >
-              Close
-            </button>
+            ></button>
           </div>
           <form id="monitor-form" novalidate>
             <fieldset id="draft-fields" class="form-fields">
-              <legend class="sr-only" data-i18n="settings.configuration">
-                Monitor configuration
-              </legend>
+              <legend
+                class="sr-only"
+                data-i18n="settings.configuration"
+              ></legend>
               <div
                 id="strategy"
                 class="setup-row"
@@ -310,62 +72,47 @@
                 aria-labelledby="method-label"
                 aria-describedby="strategy-error"
               >
-                <h3 id="method-label" data-i18n="settings.checkVia">
-                  Check via
-                </h3>
+                <h3 id="method-label" data-i18n="settings.checkVia"></h3>
                 <div class="method-options">
                   <label class="method-choice"
                     ><input
                       id="strategy-device-last-seen"
                       type="radio"
                       name="strategy"
-                      value="device-last-seen"
-                    /><span data-i18n="settings.methods.device-last-seen"
-                      >Device activity</span
-                    ></label
-                  >
+                      value="device-last-seen" /><span
+                      data-i18n="settings.methods.device-last-seen"
+                    ></span
+                  ></label>
                   <label class="method-choice"
                     ><input
                       id="strategy-timestamp-capability"
                       type="radio"
                       name="strategy"
-                      value="timestamp-capability"
-                    /><span data-i18n="settings.methods.timestamp-capability"
-                      >Last data received</span
-                    ></label
-                  >
+                      value="timestamp-capability" /><span
+                      data-i18n="settings.methods.timestamp-capability"
+                    ></span
+                  ></label>
                   <label class="method-choice"
                     ><input
                       id="strategy-manual"
                       type="radio"
                       name="strategy"
-                      value="manual"
-                    /><span data-i18n="settings.methods.manual"
-                      >Flow confirmation</span
-                    ></label
-                  >
+                      value="manual" /><span
+                      data-i18n="settings.methods.manual"
+                    ></span
+                  ></label>
                 </div>
-                <details class="method-help">
-                  <summary data-i18n="settings.methodHelp">
-                    Which method fits?
-                  </summary>
-                  <p data-i18n="settings.activityHelp">
-                    Checks whether Homey has seen the device recently.
-                  </p>
-                  <p data-i18n="settings.timestampHelp">
-                    Use this when the device or app keeps track of when new data
-                    was last received.
-                  </p>
-                  <p data-i18n="settings.manualHelp">
-                    Let a Homey Flow confirm after a successful update that
-                    everything is still working.
-                  </p>
-                </details>
+                <p
+                  id="method-description"
+                  class="muted"
+                  aria-live="polite"
+                  hidden
+                ></p>
                 <p class="field-error" id="strategy-error" hidden></p>
               </div>
               <div id="setup-fields">
                 <div class="setup-row">
-                  <h3 data-i18n="settings.devices">Devices</h3>
+                  <h3 data-i18n="settings.devices"></h3>
                   <div id="selection-controls" class="selection-controls">
                     <p
                       id="selection-summary"
@@ -380,9 +127,7 @@
                       aria-describedby="selection-error"
                       disabled
                       data-i18n="settings.selectDevices"
-                    >
-                      Select devices
-                    </button>
+                    ></button>
                   </div>
                   <p id="selection-error" class="field-error" hidden></p>
                   <div id="device-picker" class="picker" hidden>
@@ -393,26 +138,23 @@
                         class="primary"
                         type="button"
                         data-i18n="settings.useSelection"
-                      >
-                        Use selection
-                      </button>
+                      ></button>
                       <button
                         id="cancel-devices"
                         type="button"
                         data-i18n="settings.cancel"
-                      >
-                        Cancel
-                      </button>
+                      ></button>
                     </div>
                   </div>
                 </div>
                 <div id="setup-timing" class="setup-row" hidden>
-                  <h3 data-i18n="settings.timing">Timing</h3>
+                  <h3 data-i18n="settings.timing"></h3>
                   <div class="timing-grid shared-timing">
                     <div>
-                      <label for="setup-expected" data-i18n="settings.expected"
-                        >Normally, I expect an update every</label
-                      >
+                      <label
+                        for="setup-expected"
+                        data-i18n="settings.expected"
+                      ></label>
                       <div class="duration">
                         <input
                           id="setup-expected"
@@ -421,7 +163,7 @@
                           value="5"
                           inputmode="decimal"
                           aria-describedby="setup-expected-error"
-                        /><span data-i18n="settings.expectedUnit">minutes</span>
+                        /><span data-i18n="settings.expectedUnit"></span>
                       </div>
                       <p
                         id="setup-expected-error"
@@ -430,9 +172,10 @@
                       ></p>
                     </div>
                     <div>
-                      <label for="setup-timeout" data-i18n="settings.timeout"
-                        >Notify me after no valid update for</label
-                      >
+                      <label
+                        for="setup-timeout"
+                        data-i18n="settings.timeout"
+                      ></label>
                       <div class="duration">
                         <input
                           id="setup-timeout"
@@ -441,7 +184,7 @@
                           value="15"
                           inputmode="decimal"
                           aria-describedby="setup-timeout-error"
-                        /><span data-i18n="settings.timeoutUnit">minutes</span>
+                        /><span data-i18n="settings.timeoutUnit"></span>
                       </div>
                       <p
                         id="setup-timeout-error"
@@ -450,39 +193,35 @@
                       ></p>
                     </div>
                   </div>
+                  <p
+                    id="timestamp-setup-hint"
+                    class="muted"
+                    data-i18n="settings.timestampHint"
+                    hidden
+                  ></p>
                   <details id="device-settings">
-                    <summary data-i18n="settings.perDevice">
-                      Adjust settings per device
-                    </summary>
-                    <p
-                      id="timestamp-setup-hint"
-                      class="muted"
-                      data-i18n="settings.timestampHint"
-                      hidden
-                    >
-                      Check the timestamp field and format for each device.
-                    </p>
+                    <summary data-i18n="settings.perDevice"></summary>
+
                     <div id="selected-devices"></div>
                   </details>
                 </div>
               </div>
               <div id="edit-fields" hidden>
                 <div class="field">
-                  <label for="source" data-i18n="settings.integration"
-                    >Integration</label
+                  <label for="source" data-i18n="settings.integration"></label
                   ><select id="source" aria-describedby="source-error"></select>
                   <p class="field-error" id="source-error" hidden></p>
                 </div>
                 <div class="field">
-                  <label for="device" data-i18n="settings.device">Device</label
+                  <label for="device" data-i18n="settings.device"></label
                   ><select
                     id="device"
                     aria-describedby="device-help device-error"
                   ></select
-                  ><small id="device-help" data-i18n="settings.deviceHelp"
-                    >Choose the device whose freshness you want to
-                    monitor.</small
-                  >
+                  ><small
+                    id="device-help"
+                    data-i18n="settings.deviceHelp"
+                  ></small>
                   <p class="field-error" id="device-error" hidden></p>
                 </div>
                 <div id="timestamp-fields" hidden>
@@ -492,62 +231,49 @@
                     tabindex="-1"
                     aria-describedby="capabilities-help capabilities-error"
                   >
-                    <legend data-i18n="settings.timestampField">
-                      Which field contains the delivery timestamp?
-                    </legend>
+                    <legend data-i18n="settings.timestampField"></legend>
                     <small
                       id="capabilities-help"
                       data-i18n="settings.capabilitiesHelp"
-                      >Choose a timestamp, not a measurement. If you select
-                      several fields, a new time in any one counts as an update.
-                      Check what the source actually reports.</small
-                    >
+                    ></small>
                     <div id="capability-options"></div>
                     <small
                       id="capabilities-empty"
                       hidden
                       data-i18n="settings.emptyCapabilities"
-                      >No timestamp-compatible fields are currently listed for
-                      this device. Refresh the inventory or choose another
-                      freshness check.</small
-                    >
+                    ></small>
                     <p class="field-error" id="capabilities-error" hidden></p>
                   </fieldset>
                   <div class="field">
-                    <label for="encoding" data-i18n="settings.encoding"
-                      >Timestamp format</label
+                    <label for="encoding" data-i18n="settings.encoding"></label
                     ><select
                       id="encoding"
                       aria-describedby="encoding-help encoding-error"
                     >
-                      <option value="iso" data-i18n="settings.iso">
-                        Date and time (ISO, with timezone)
-                      </option>
+                      <option value="iso" data-i18n="settings.iso"></option>
                       <option
                         value="epoch-seconds"
                         data-i18n="settings.seconds"
-                      >
-                        Unix time in seconds
-                      </option>
+                      ></option>
                       <option
                         value="epoch-ms"
                         data-i18n="settings.milliseconds"
-                      >
-                        Unix time in milliseconds
-                      </option></select
-                    ><small id="encoding-help" data-i18n="settings.encodingHelp"
-                      >Match the format used by the source. The local test
-                      source uses ISO.</small
-                    >
+                      ></option></select
+                    ><small
+                      id="encoding-help"
+                      data-i18n="settings.encodingHelp"
+                    ></small>
                     <p class="field-error" id="encoding-error" hidden></p>
                   </div>
                 </div>
                 <fieldset class="field">
-                  <legend data-i18n="settings.timing">Timing</legend>
+                  <legend data-i18n="settings.timing"></legend>
                   <div class="timing-grid">
                     <div>
-                      <label for="expected" data-i18n="settings.expectedMinutes"
-                        >Expected update interval (minutes)</label
+                      <label
+                        for="expected"
+                        data-i18n="settings.expectedMinutes"
+                      ></label
                       ><input
                         id="expected"
                         type="number"
@@ -558,14 +284,14 @@
                       /><small
                         id="expected-help"
                         data-i18n="settings.expectedHelp"
-                        >How often should this source normally report activity
-                        or data?</small
-                      >
+                      ></small>
                       <p class="field-error" id="expected-error" hidden></p>
                     </div>
                     <div>
-                      <label for="timeout" data-i18n="settings.timeoutMinutes"
-                        >Consider stale after (minutes)</label
+                      <label
+                        for="timeout"
+                        data-i18n="settings.timeoutMinutes"
+                      ></label
                       ><input
                         id="timeout"
                         type="number"
@@ -576,40 +302,32 @@
                       /><small
                         id="timeout-help"
                         data-i18n="settings.timeoutHelp"
-                        >Alert when no valid update has been seen for this long.
-                        Activity and timestamp checks require at least 2
-                        minutes.</small
-                      >
+                      ></small>
                       <p class="field-error" id="timeout-error" hidden></p>
                     </div>
                   </div>
                 </fieldset>
                 <details id="advanced">
-                  <summary data-i18n="settings.advanced">
-                    Advanced (optional)
-                  </summary>
+                  <summary data-i18n="settings.advanced"></summary>
                   <div class="field">
-                    <label for="contract" data-i18n="settings.note"
-                      >Technical note (optional)</label
+                    <label for="contract" data-i18n="settings.note"></label
                     ><textarea
                       id="contract"
                       maxlength="2000"
                       aria-describedby="contract-help contract-error"
                     ></textarea
-                    ><small id="contract-help" data-i18n="settings.contractHelp"
-                      >Optional note about why this signal provides reliable
-                      evidence of activity or delivery. Editing this note does
-                      not restart monitoring.</small
-                    >
+                    ><small
+                      id="contract-help"
+                      data-i18n="settings.contractHelp"
+                    ></small>
                     <p class="field-error" id="contract-error" hidden></p>
                   </div>
                 </details>
                 <label class="enabled"
                   ><input type="checkbox" id="enabled" checked /><span
                     data-i18n="settings.enabled"
-                    >Monitor enabled</span
-                  ></label
-                >
+                  ></span
+                ></label>
               </div>
             </fieldset>
             <p
@@ -620,79 +338,185 @@
               tabindex="-1"
             ></p>
             <details id="save-details" hidden>
-              <summary data-i18n="settings.errorDetails">Error details</summary>
+              <summary data-i18n="settings.errorDetails"></summary>
               <pre id="save-error-detail"></pre>
             </details>
             <div id="form-actions" class="actions">
-              <button id="add" type="submit" class="primary">Add monitor</button
+              <button
+                id="add"
+                type="submit"
+                class="primary"
+                data-i18n="settings.addMonitors"
+              ></button
               ><button
                 id="cancel"
                 type="button"
                 hidden
                 data-i18n="settings.cancel"
-              >
-                Cancel
-              </button>
+              ></button>
             </div>
           </form>
         </section>
-        <p id="monitors-empty" data-i18n="settings.emptyMonitors">
-          No monitors yet. Choose Add monitor to get started.
-        </p>
-        <div
-          id="monitor-summary"
-          class="actions"
-          aria-label="Filter monitors by method"
-        ></div>
+        <p id="monitors-empty" data-i18n="settings.emptyMonitors"></p>
+        <div id="monitor-summary" class="filter-chips"></div>
         <ul id="monitors" class="monitor-list"></ul>
       </section>
-      <section class="card" aria-labelledby="test-title">
-        <div class="section-heading">
-          <h2 id="test-title">Local self-test</h2>
-          <span id="test-badge" class="badge" hidden></span>
-        </div>
-        <p class="subtitle">Data Watchdog Test Source (simulation)</p>
-        <p>
-          Local simulation only. Test incidents use your normal watchdog
-          notification Flows. Production devices are not controlled.
-        </p>
-        <p id="test-unpaired">
-          Pair the optional Data Watchdog Test Source device to run safe local
-          end-to-end tests.
-        </p>
-        <div id="test-paired" hidden>
-          <dl id="test-summary"></dl>
-          <details>
-            <summary>Technical details</summary>
-            <dl id="test-details"></dl>
-          </details>
-          <p class="muted">
-            Starts stopped after every app restart. Stop freezes the timestamp;
-            Send once leaves a stopped source stopped.
-          </p>
-          <div class="actions">
-            <button id="test-start" type="button" class="primary">
-              Start heartbeat</button
-            ><button id="test-stop" type="button">Stop</button
-            ><button id="test-send" type="button">Send once</button>
-          </div>
-        </div>
-        <p id="test-message" role="status" aria-live="polite"></p>
-      </section>
-      <section class="card" aria-labelledby="observer-title">
-        <h2 id="observer-title">Observation status</h2>
-        <dl id="observer-summary"></dl>
-        <p id="metadata-warning" hidden>
-          Some integration names or zones could not be loaded. Monitoring may
-          still be available.
-        </p>
-        <h3>Integrations</h3>
-        <ul id="integration-status" class="integration-list"></ul>
-        <details>
-          <summary>Diagnostics</summary>
-          <pre id="status"></pre>
+
+      <details id="help" class="secondary help-content">
+        <summary id="help-summary" data-i18n="settings.help"></summary>
+        <section id="help-basics" aria-labelledby="help-basics-title">
+          <h3 id="help-basics-title" data-i18n="settings.help_basics_0"></h3>
+          <p data-i18n="settings.help_basics_1"></p>
+        </section>
+        <section id="help-quick-start" aria-labelledby="help-quick-start-title">
+          <h3
+            id="help-quick-start-title"
+            data-i18n="settings.help_quick_start_0"
+          ></h3>
+          <ol>
+            <li data-i18n="settings.helpStart"></li>
+            <li data-i18n="settings.help_quick_start_1"></li>
+            <li data-i18n="settings.help_quick_start_2"></li>
+            <li data-i18n="settings.help_quick_start_3"></li>
+            <li data-i18n="settings.helpSave"></li>
+            <li data-i18n="settings.help_quick_start_4"></li>
+          </ol>
+        </section>
+        <details id="help-methods">
+          <summary data-i18n="settings.helpMethods"></summary>
+          <h3 data-i18n="settings.methods.device-last-seen"></h3>
+          <p data-i18n="settings.activityHelp"></p>
+          <p data-i18n="settings.activityDetail"></p>
+          <h3 data-i18n="settings.methods.timestamp-capability"></h3>
+          <p data-i18n="settings.timestampHelp"></p>
+          <p data-i18n="settings.dataDetail"></p>
+          <h3 data-i18n="settings.methods.manual"></h3>
+          <p data-i18n="settings.manualHelp"></p>
+          <p data-i18n="settings.flowDetail"></p>
         </details>
-      </section>
+        <details id="help-timing">
+          <summary data-i18n="settings.help_timing_0"></summary>
+          <p data-i18n="settings.help_timing_1"></p>
+          <p data-i18n="settings.help_timing_2"></p>
+          <p data-i18n="settings.helpTimingExample"></p>
+          <p data-i18n="settings.help_timing_3"></p>
+        </details>
+        <details id="help-statuses">
+          <summary data-i18n="settings.help_statuses_0"></summary>
+          <dl>
+            <dt data-i18n="settings.states.WARMING_UP"></dt>
+            <dd data-i18n="settings.help_statuses_1"></dd>
+            <dt data-i18n="settings.states.HEALTHY"></dt>
+            <dd data-i18n="settings.help_statuses_2"></dd>
+            <dt data-i18n="settings.states.SUSPECTED_STALE"></dt>
+            <dd data-i18n="settings.help_statuses_3"></dd>
+            <dt data-i18n="settings.states.DEVICE_STALE"></dt>
+            <dd data-i18n="settings.help_statuses_4"></dd>
+            <dt data-i18n="settings.states.RECOVERING"></dt>
+            <dd data-i18n="settings.help_statuses_5"></dd>
+            <dt data-i18n="settings.states.DISABLED"></dt>
+            <dd data-i18n="settings.help_statuses_6"></dd>
+            <dt data-i18n="settings.states.MISSING"></dt>
+            <dd data-i18n="settings.help_statuses_7"></dd>
+            <dt data-i18n="settings.states.UNKNOWN"></dt>
+            <dd data-i18n="settings.help_statuses_8"></dd>
+          </dl>
+        </details>
+        <details id="help-notifications">
+          <summary data-i18n="settings.help_notifications_0"></summary>
+          <p data-i18n="settings.help_notifications_1"></p>
+          <ol>
+            <li data-i18n="settings.help_notifications_2"></li>
+            <li data-i18n="settings.help_notifications_3"></li>
+          </ol>
+          <p data-i18n="settings.help_notifications_4"></p>
+          <p data-i18n="settings.help_notifications_5"></p>
+        </details>
+        <details id="help-self-test">
+          <summary data-i18n="settings.help_self_test_0"></summary>
+          <p data-i18n="settings.help_self_test_1"></p>
+          <ul>
+            <li data-i18n="settings.help_self_test_2"></li>
+            <li data-i18n="settings.help_self_test_3"></li>
+            <li data-i18n="settings.help_self_test_4"></li>
+            <li data-i18n="settings.help_self_test_5"></li>
+          </ul>
+          <p data-i18n="settings.helpFirstTest"></p>
+        </details>
+        <details id="help-advanced">
+          <summary data-i18n="settings.help_advanced_0"></summary>
+          <p data-i18n="settings.help_advanced_1"></p>
+          <p data-i18n="settings.help_advanced_2"></p>
+        </details>
+        <details id="help-troubleshooting">
+          <summary data-i18n="settings.help_troubleshooting_0"></summary>
+          <p data-i18n="settings.help_troubleshooting_1"></p>
+          <p data-i18n="settings.helpMethodTrouble"></p>
+          <p data-i18n="settings.help_troubleshooting_2"></p>
+        </details>
+        <details id="help-limitations">
+          <summary data-i18n="settings.help_limitations_0"></summary>
+          <p data-i18n="settings.help_limitations_1"></p>
+          <p data-i18n="settings.help_limitations_2"></p>
+        </details>
+      </details>
+      <details id="diagnostics" class="secondary">
+        <summary data-i18n="settings.diagnosticsTitle"></summary>
+        <section aria-labelledby="test-title">
+          <div class="section-heading">
+            <h2 id="test-title" data-i18n="settings.testTitle"></h2>
+            <span id="test-badge" class="badge" hidden></span>
+          </div>
+          <p class="subtitle" data-i18n="settings.testSubtitle"></p>
+          <p data-i18n="settings.testIntro"></p>
+          <p id="test-unpaired" data-i18n="settings.testUnpaired"></p>
+          <div id="test-paired" hidden>
+            <dl id="test-summary"></dl>
+            <details>
+              <summary data-i18n="settings.details"></summary>
+              <dl id="test-details"></dl>
+            </details>
+            <p class="muted" data-i18n="settings.testRestartHint"></p>
+            <div class="actions">
+              <button
+                id="test-start"
+                type="button"
+                data-i18n="settings.testStart"
+              ></button
+              ><button
+                id="test-stop"
+                type="button"
+                data-i18n="settings.testStop"
+              ></button
+              ><button
+                id="test-send"
+                type="button"
+                data-i18n="settings.testSend"
+              ></button>
+            </div>
+          </div>
+          <p id="test-message" role="status" aria-live="polite"></p>
+          <details id="test-error-details" hidden>
+            <summary data-i18n="settings.errorDetails"></summary>
+            <pre id="test-error-detail"></pre>
+          </details>
+        </section>
+        <section aria-labelledby="observer-title">
+          <h2 id="observer-title" data-i18n="settings.observerTitle"></h2>
+          <dl id="observer-summary"></dl>
+          <p
+            id="metadata-warning"
+            hidden
+            data-i18n="settings.metadataWarning"
+          ></p>
+          <h3 data-i18n="settings.integrations"></h3>
+          <ul id="integration-status" class="integration-list"></ul>
+          <details>
+            <summary data-i18n="settings.rawDiagnostics"></summary>
+            <pre id="status"></pre>
+          </details>
+        </section>
+      </details>
     </main>
     <script src="settings.js"></script>
   </body>
