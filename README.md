@@ -2,7 +2,11 @@
 
 Lokale watchdog voor aantoonbare datalevering en apparaatactiviteit, met gebundelde storingsmeldingen per bron-app. **Homey Self-Hosted Server is het primaire doelplatform**, naast Homey Pro 2023/mini/2026.
 
-Status: v0.1 ontwikkelbasis. De gebruiker heeft de app succesvol in development mode op SHS gestart. Deze uitbreiding is uitsluitend offline gevalideerd; er is tijdens deze wijziging niets op een live Homey geïnstalleerd of gewijzigd. Zie [onderzoek en architectuur](docs/architecture.md), [toestandsmodellen](docs/state-machines.md), [SHS-matrix](docs/shs-compatibility.md) en [opleverrapport](docs/delivery-report.md).
+Status: development en voorbereiding van de volgende Test-build. Store-afbeeldingen, iconen en EN/NL Store-copy zijn aanwezig. De Settings-interface en Flow-weergave zijn door de gebruiker live op SHS gecontroleerd. Deze controles betekenen niet dat ieder bron-/platformscenario al end-to-end is gevalideerd. Certificering is nog niet opnieuw ingediend; de publieke release is nog niet goedgekeurd.
+
+Vereist Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026) of Homey Self-Hosted Server met Homey 12.9.0 of nieuwer. Oudere Homey-modellen (local platform v1) en Homey Cloud worden niet ondersteund. De bestaande runtimecontrole accepteert uitsluitend platform v2. Dit is geen claim dat de Store oudere modellen automatisch blokkeert; de exacte distributiebeperking wordt apart met Athom bevestigd.
+
+Zie [onderzoek en architectuur](docs/architecture.md), [toestandsmodellen](docs/state-machines.md) en de [SHS-acceptatiepunten](docs/shs-compatibility.md).
 
 New to Data Pulse? Start with the [User Guide](docs/user-guide.md). The settings page also includes a built-in **Help** section, available without opening GitHub.
 
@@ -36,7 +40,7 @@ npm run build
 npm run validate
 ```
 
-`npm run check` voert de volledige controle inclusief formattering uit. `npm run format` formatteert de bron. `npm run manifest` regenereert `app.json` uit `scripts/generate-manifest.mjs`. Homey-validatie gebruikt niveau **debug**, passend bij deze ontwikkelfase; App Store-afbeeldingen/publicatiegegevens zijn bewust nog niet toegevoegd. De brede API-permissie veroorzaakt de verwachte reviewwaarschuwing van Homey.
+`npm run check` voert de volledige controle inclusief formattering uit. `npm run format` formatteert de bron. `npm run manifest` regenereert `app.json` uit `scripts/generate-manifest.mjs`. De normale check gebruikt Homey-validatie op niveau **debug**. Voer voor een releasecandidate daarnaast `npx homey app validate --level publish` uit; dit valideert zonder te publiceren. De brede API-permissie veroorzaakt de verwachte reviewwaarschuwing van Homey.
 
 `app.ts` en `api.ts` compileren naar `.homeybuild/`. `homey` is op het apparaat een SDK-module; de gelijknamige devDependency is de CLI. Installeer de SDK-module niet als gewone productieafhankelijkheid. De lockfile legt de onderzochte API-client en tooling vast.
 
@@ -48,17 +52,22 @@ npx homey select
 npx homey app install
 ```
 
-Deze opdrachten veranderen een live Homey. Ze zijn tijdens deze opdracht **niet uitgevoerd**. Volg daarna de [geïsoleerde self-testacceptatie](docs/self-test.md#handmatige-shs-acceptatie).
+Deze opdrachten veranderen een live Homey en horen niet bij de offline checks. Volg daarna de [geïsoleerde self-testacceptatie](docs/self-test.md#handmatige-shs-acceptatie).
 
 ## Configureren
 
-De kleine App Settings-pagina toont geïnventariseerde integraties en apparaten. Selecteer een apparaat, een bewezen strategie, eventueel timestamp-capabilities en een verwacht interval/timeout. Een technische notitie is optioneel onder Advanced. Schakel monitors individueel in/uit. Nieuwe inventarisapparaten worden nooit automatisch bewaakt. Integraties zonder apparaten blijven zichtbaar. De pagina toont observerstatus, ontbrekende metadata, monitorstatus en Flow-dispatchfouten.
+1. Open **Monitor toevoegen** boven de monitorlijst.
+2. Kies bij **Controleer via**: **Apparaatactiviteit**, **Laatste gegevens ontvangen** of **Bevestiging via Flow**.
+3. Open **Apparaten kiezen**, selecteer één of meer apparaten en bevestig met **Selectie bevestigen**. De picker sluit; **Wijzigen** opent hem opnieuw.
+4. Stel één gezamenlijke verwachte updatefrequentie en meldtermijn in.
+5. Open alleen indien nodig **Instellingen per apparaat aanpassen**. Met **Afwijkende timing instellen** krijgt één bron eigen tijden; zonder afwijking gelden de gezamenlijke waarden. Voor Laatste gegevens ontvangen kies je hier per apparaat het juiste tijdveld en formaat.
+6. Kies **Monitors toevoegen**. Elk apparaat krijgt een afzonderlijke monitor; nieuwe inventarisapparaten worden nooit automatisch bewaakt.
 
-**Edit** laadt een bestaande monitor. **Save changes** vervangt dezelfde monitor-ID; **Cancel** verwerpt het concept zonder write. Apparaat- en bronidentiteit blijven vast tijdens UI-edit. Strategie, timestamp-capabilities/encoding, interval, timeout, enabled en technische notitie zijn bewerkbaar. De notitie (`sourceContract`) is metadata en veroorzaakt geen nieuwe grace. Detectiewijzigingen starten die monitor opnieuw met grace; presentatievelden en ongewijzigde monitors behouden compatibele runtime. Een lopend incident dat incompatibel wordt, eindigt administratief zonder valse herstelmelding.
+**Laatste gegevens ontvangen** gebruikt uitsluitend een veld waarvan de **waarde zelf** een datum/tijd van gegevensontvangst bevat. Een temperatuur, teller of `capability.lastUpdated` is geen bewijs. De picker biedt passende actuele tijdwaarden aan en toont een preview. Als geen geschikt veld bestaat, kies je een andere methode. Opgeslagen ontbrekende velden blijven bij Bewerken zichtbaar met een waarschuwing.
 
-Freshness check gebruikt begrijpelijke radiokeuzes: Device activity, Delivery timestamp en Explicit heartbeat. Alleen Delivery timestamp toont checkboxen en encoding. Eén ondersteund veld wordt vooraf aangevinkt; controleer zelf of het werkelijk een levertijd bevat. Bij meerdere velden kies je expliciet. Fouten verschijnen bij het veld en bij Add/Save, met focus op het eerste probleem. Een backendfout bewaart het concept; een geslaagde write blijft zichtbaar als statusverversing mislukt. Monitors, self-test en observerstatus hebben aparte kaarten; technische gegevens staan onder Details/Diagnostics.
+Open bij een bestaande monitor het **Meer-menu (•••)** voor **Bewerken**, **Uitschakelen/Inschakelen** of **Verwijderen**. **Wijzigingen opslaan** behoudt dezelfde monitor-ID; **Annuleren** verwerpt het concept. Bron en apparaat blijven tijdens Bewerken vast. Detectiewijzigingen starten een nieuwe observatieperiode; een technische notitie is alleen metadata. Verwijderen wist alleen de monitor, niet het Homey-apparaat.
 
-Zie [UX- en compatibilityrapport](docs/ui-polish-report.md) voor de gereproduceerde Add-fout, snapshotcompatibiliteit en veilige vervolgtest.
+De compacte monitorlijst toont naam, status, methode, meldtermijn en laatste activiteit/ontvangst. Technische gegevens staan in het Meer-menu onder **Technische details**. **Test en diagnostiek** en **Hulp** zijn ingeklapt beschikbaar. Fouten staan bij de relevante invoer; een mislukte save bewaart het concept.
 
 Voor geavanceerde correlatie-instellingen blijft de geauthenticeerde config-API beschikbaar. `PUT` vervangt de volledige configuratie; lees eerst `GET /config`.
 

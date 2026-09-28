@@ -125,7 +125,7 @@
     "dataDetail": "Het gekozen veld moet zelf een datum/tijdwaarde bevatten die de bron bijwerkt. Een meetwaarde of de lastUpdated-metadata is geen vervanging. Bij meerdere velden telt een nieuw tijdstip in één veld als update.",
     "flowDetail": "De bevestiging moet volgen op een werkelijk geslaagde update. Een blinde herhaaltimer bewijst niet dat de bron werkt. Bestaande API-bevestigingen blijven ondersteund.",
     "helpTimingExample": "Bij updates om de 5 minuten kun je elke 5 minuten een update verwachten en na 15 minuten een melding laten geven. Houd marge voor vertraging. De meldtermijn moet minstens zo lang zijn als het verwachte interval. Apparaatactiviteit en Laatste gegevens ontvangen vereisen minimaal 2 minuten.",
-    "helpFirstTest": "Kies voor een eerste test Laatste gegevens ontvangen, het veld Last test heartbeat, ISO-formaat, een verwacht interval van 0,5 minuut en een meldtermijn van 2 minuten.",
+    "helpFirstTest": "Kies voor een eerste test Laatste gegevens ontvangen, het veld Laatste testbevestiging, ISO-formaat, een verwacht interval van 0,5 minuut en een meldtermijn van 2 minuten.",
     "helpMethodTrouble": "Wordt Laatste gegevens ontvangen nooit Gezond? Controleer het veld, het formaat en of het tijdstip vooruitgaat. Blijft Apparaatactiviteit Onbekend, dan biedt Homey mogelijk geen bruikbaar tijdstip van de laatste activiteit.",
     "helpStart": "Kies Monitor toevoegen boven de lijst en kies hoe je wilt controleren op updates.",
     "helpSave": "Kies Monitors toevoegen. Velden die aandacht nodig hebben worden gemarkeerd.",
@@ -246,5 +246,18 @@
       "manual": "Flow"
     }
   },
-  "testSourceName": "Data Pulse Testbron (simulatie)"
+  "testSourceName": "Data Pulse Testbron (simulatie)",
+  "errors": {
+    "unknownMonitor": "Deze monitor bestaat niet meer. Kies een bestaande monitor.",
+    "confirmationMethodRequired": "Deze monitor gebruikt geen Bevestiging via Flow.",
+    "invalidUpdateTime": "Vul het tijdstip van de geslaagde update in als ISO-datum en -tijd met tijdzone.",
+    "testSourceRequired": "Voeg eerst het apparaat Data Pulse Testbron toe.",
+    "unknownTestAction": "Onbekende testactie. Kies Test starten, Stoppen of Eenmalig sturen.",
+    "testSourceRemoved": "De testbron is verwijderd. Voeg deze opnieuw toe om te testen.",
+    "singleTestSource": "Er kan maar één lokale testbron worden toegevoegd.",
+    "confirmationTargetChanged": "De geselecteerde bron is gewijzigd. Controleer de monitor voordat je een update bevestigt.",
+    "checkpointFailed": "De bewakingsstatus kon niet worden opgeslagen. Controleer de diagnostiek van de app.",
+    "starting": "Data Pulse start op. Probeer het zo opnieuw.",
+    "unsupportedPlatform": "Data Pulse vereist Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026) of Homey Self-Hosted Server. Oudere Homey-modellen en Homey Cloud worden niet ondersteund."
+  }
 }

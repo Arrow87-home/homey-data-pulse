@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import prettier from 'prettier';
 const tokenTitles = {
   source_app: { en: 'Source app', nl: 'Bron-app' },
   source_app_id: { en: 'Source app ID', nl: 'Bron-app-ID' },
@@ -120,7 +122,7 @@ const manifest = {
   capabilities: {
     last_test_heartbeat: {
       type: 'string',
-      title: { en: 'Last test heartbeat' },
+      title: { en: 'Last test heartbeat', nl: 'Laatste testbevestiging' },
       getable: true,
       setable: false,
       uiComponent: 'sensor',
@@ -272,4 +274,13 @@ const manifest = {
     ].map(([id, method, path]) => [id, { method, path, public: false }]),
   ),
 };
-fs.writeFileSync('app.json', JSON.stringify(manifest, null, 2) + '\n');
+const formatConfig = await prettier.resolveConfig(
+  fileURLToPath(new URL('../app.json', import.meta.url)),
+);
+fs.writeFileSync(
+  'app.json',
+  await prettier.format(JSON.stringify(manifest, null, 2), {
+    ...formatConfig,
+    parser: 'json',
+  }),
+);

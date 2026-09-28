@@ -4,6 +4,7 @@ import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import prettier from 'prettier';
 import { configSchema } from '../src/core/model';
 import {
   TEST_APP_ID,
@@ -16,16 +17,25 @@ const manifest = JSON.parse(readFileSync('app.json', 'utf8'));
 const locale = (language: string) =>
   JSON.parse(readFileSync(`locales/${language}.json`, 'utf8'));
 
-test('Data Pulse manifest is generated from its source and localized test-source names agree', () => {
+test('Data Pulse manifest generation is deterministic, canonical and localized', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'data-pulse-manifest-'));
   try {
     execFileSync(process.execPath, [resolve('scripts/generate-manifest.mjs')], {
       cwd: directory,
     });
-    assert.deepEqual(
-      JSON.parse(readFileSync(join(directory, 'app.json'), 'utf8')),
-      manifest,
+    const generated = readFileSync(join(directory, 'app.json'), 'utf8');
+    assert.equal(generated, readFileSync('app.json', 'utf8'));
+    assert.equal(
+      await prettier.check(generated, {
+        ...(await prettier.resolveConfig(resolve('app.json'))),
+        parser: 'json',
+      }),
+      true,
     );
+    execFileSync(process.execPath, [resolve('scripts/generate-manifest.mjs')], {
+      cwd: directory,
+    });
+    assert.equal(readFileSync(join(directory, 'app.json'), 'utf8'), generated);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

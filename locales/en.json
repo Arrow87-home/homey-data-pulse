@@ -246,5 +246,18 @@
       "manual": "Flow"
     }
   },
-  "testSourceName": "Data Pulse Test Source (simulation)"
+  "testSourceName": "Data Pulse Test Source (simulation)",
+  "errors": {
+    "unknownMonitor": "This monitor no longer exists. Select an existing monitor.",
+    "confirmationMethodRequired": "This monitor does not use Flow confirmation.",
+    "invalidUpdateTime": "Enter the successful update time as an ISO date and time with timezone.",
+    "testSourceRequired": "Add the Data Pulse Test Source device first.",
+    "unknownTestAction": "Unknown test action. Choose Start, Stop or Send once.",
+    "testSourceRemoved": "The test source has been removed. Add it again to run a test.",
+    "singleTestSource": "Only one local test source can be added.",
+    "confirmationTargetChanged": "The selected source has changed. Check the monitor before confirming an update.",
+    "checkpointFailed": "Monitoring state could not be saved. Check the app diagnostics.",
+    "starting": "Data Pulse is starting. Try again shortly.",
+    "unsupportedPlatform": "Data Pulse requires Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026), or Homey Self-Hosted Server. Older Homey models and Homey Cloud are not supported."
+  }
 }

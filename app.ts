@@ -6,15 +6,14 @@ import { SettingsPersistence } from './src/homey/persistence';
 import { WatchdogService } from './src/homey/service';
 import { dispatchFlows } from './src/homey/flows';
 import { TestSource, TestAction } from './src/homey/test-source';
+import { withUserErrors } from './src/homey/user-errors';
 
 class DataWatchdogApp extends Homey.App {
   service?: WatchdogService;
   private timer?: NodeJS.Timeout;
   async onInit(): Promise<void> {
     if (this.homey.platform !== 'local' || this.homey.platformVersion !== 2)
-      throw new Error(
-        'This version requires Homey SHS or Homey Pro 2023/mini/2026 (local platform v2)',
-      );
+      throw new Error(this.homey.__('errors.unsupportedPlatform'));
     const api = await HomeyAPI.createAppAPI({ homey: this.homey });
     this.service = new WatchdogService(
       { now: () => Date.now() },
@@ -44,7 +43,7 @@ class DataWatchdogApp extends Homey.App {
   private testSource?: TestSource;
   registerTestSource(source: TestSource): void {
     if (this.testSource && this.testSource !== source)
-      throw new Error('Only one local test source is supported');
+      throw new Error(this.homey.__('errors.singleTestSource'));
     this.testSource = source;
   }
   unregisterTestSource(source: TestSource): void {
@@ -54,11 +53,13 @@ class DataWatchdogApp extends Homey.App {
     return this.testSource?.status() ?? { paired: false };
   }
   async testSourceAction(action: unknown): Promise<void> {
-    if (action !== 'start' && action !== 'stop' && action !== 'send')
-      throw new Error('Unknown test source action');
-    if (!this.testSource)
-      throw new Error('Add the Data Pulse Test Source device first');
-    await this.testSource.action(action);
+    return withUserErrors(this.homey, async () => {
+      if (action !== 'start' && action !== 'stop' && action !== 'send')
+        throw new Error('Unknown test source action');
+      if (!this.testSource)
+        throw new Error('Add the Data Pulse Test Source device first');
+      await this.testSource.action(action);
+    });
   }
 
   private registerFlows(): void {
@@ -97,10 +98,13 @@ class DataWatchdogApp extends Homey.App {
         .registerArgumentAutocompleteListener('monitor', async (query) =>
           monitorChoices(query),
         )
-        .registerRunListener(
-          async (args: { monitor: { id: string } }) =>
-            service.engine.status(args.monitor.id) ===
-            (state === 'healthy' ? 'HEALTHY' : 'DEVICE_STALE'),
+        .registerRunListener(async (args: { monitor: { id: string } }) =>
+          withUserErrors(
+            this.homey,
+            () =>
+              service.engine.status(args.monitor.id) ===
+              (state === 'healthy' ? 'HEALTHY' : 'DEVICE_STALE'),
+          ),
         );
       this.homey.flow
         .getConditionCard(`integration_is_${state}`)
@@ -114,8 +118,10 @@ class DataWatchdogApp extends Homey.App {
         );
     }
     this.homey.flow.getActionCard('check_all').registerRunListener(async () => {
-      await service.tick();
-      return true;
+      return withUserErrors(this.homey, async () => {
+        await service.tick();
+        return true;
+      });
     });
     this.homey.flow
       .getActionCard('check_monitor')
@@ -123,9 +129,11 @@ class DataWatchdogApp extends Homey.App {
         monitorChoices(query),
       )
       .registerRunListener(async (args: { monitor: { id: string } }) => {
-        service.engine.monitor(args.monitor.id);
-        await service.tick();
-        return true;
+        return withUserErrors(this.homey, async () => {
+          service.engine.monitor(args.monitor.id);
+          await service.tick();
+          return true;
+        });
       });
     this.homey.flow
       .getActionCard('record_heartbeat')
@@ -136,7 +144,9 @@ class DataWatchdogApp extends Homey.App {
       )
       .registerRunListener(
         async (args: { monitor: { id: string }; delivered_at: string }) =>
-          service.heartbeat(args.monitor.id, args.delivered_at),
+          withUserErrors(this.homey, () =>
+            service.heartbeat(args.monitor.id, args.delivered_at),
+          ),
       );
   }
   async onUninit(): Promise<void> {

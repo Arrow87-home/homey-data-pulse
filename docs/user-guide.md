@@ -2,6 +2,8 @@
 
 Data Pulse helps you notice when a Homey device or integration stops reporting. This guide explains how to choose a useful signal, set up a monitor and receive notifications. You only need to know how to open an app's settings and create a Homey Flow.
 
+Requires Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026), or Homey Self-Hosted Server, running Homey 12.9.0 or later. Older Homey models (local platform v1) and Homey Cloud are not supported.
+
 Open **Data Pulse → Settings** to configure monitoring. The same basic guidance is available there under **Help**, without opening a website.
 
 ## What Data Pulse does
@@ -14,17 +16,16 @@ You choose which devices to monitor. New devices are not monitored automatically
 
 ## Quick start
 
-1. Open Data Pulse's settings and find **Add monitor**.
-2. Choose the **Integration** and **Device** you want to monitor.
-3. Under **How should freshness be checked?**, choose a method supported by that source. Use the guidance below rather than guessing.
-4. Enter the **Expected update interval (minutes)**: how often the source normally reports.
-5. Enter **Consider stale after (minutes)**: how long a gap you are willing to allow. Give normal delays some margin.
-6. Leave **Monitor enabled** checked. **Technical note** under **Advanced (optional)** can stay empty.
-7. Select **Add monitor**. If something needs correction, the relevant field is highlighted and a message appears beside the save action.
-8. Use **Refresh status** to see current monitoring information. A new monitor normally begins at WARMING_UP and needs a fresh update before becoming HEALTHY.
-9. For phone notifications, create a Flow using **Data Pulse incident started**, as described in [Getting notifications](#getting-notifications).
+1. Open Data Pulse's settings and choose **+ Add monitor** above the list.
+2. Choose **Device activity**, **Last data received** or **Flow confirmation** under **Check via**.
+3. Open **Select devices**, select one or more devices, then confirm with **Use selection**. The picker closes and shows a compact summary. Use **Change** to reopen it.
+4. Set **Expected every** and **Notify after** in minutes once for the selection.
+5. Only if needed, open **Adjust settings per device** and choose **Use different timing** for an individual source. Sources without an override use the shared timing. With Last data received, check each device's time field and format here.
+6. Choose **Add monitors**. Each selected device becomes an individual monitor. Errors are shown beside the relevant input and preserve your draft.
+7. Use **Refresh** to see current status. A new monitor starts at **Starting** and needs fresh evidence to become **Healthy**.
+8. For phone notifications, create a Flow using **Data Pulse incident started**, as described in [Getting notifications](#getting-notifications).
 
-There can be one monitor per device. If a monitor already exists, use **Edit** on its card.
+There is one monitor per device. For an existing monitor, open its **More menu (•••)** and choose **Edit**.
 
 ## Choosing a freshness method
 
@@ -36,11 +37,11 @@ Use this when Homey's last-seen information reliably advances when the device or
 
 This can be useful for checking that a source is still responding. However, **activity does not necessarily prove that a new measurement was delivered**. For example, a device could respond to a command while its measurement updates have stopped.
 
-Not every device or integration provides useful last-seen information. A device appearing available in Homey is not enough on its own. If this method never receives fresh activity, look for a genuine Delivery timestamp or a supported Explicit heartbeat instead.
+Not every device or integration provides useful last-seen information. A device appearing available in Homey is not enough on its own. If this method never receives fresh activity, look for a genuine time field for Last data received, or use a supported Flow confirmation instead.
 
-### Delivery timestamp
+### Last data received
 
-Use this when the source exposes a date/time field that is updated whenever new data is delivered. When its meaning is known, a genuine delivery timestamp is usually the strongest choice for checking data delivery.
+Use this only when the selected field’s VALUE itself contains the date/time of data receipt and the source updates it after receiving new data. A measurement value or `capability.lastUpdated` is not a substitute. When its meaning is known, a genuine delivery timestamp is usually the strongest choice for checking data delivery.
 
 1. Select the field containing that delivery time. Its readable title is shown above its smaller technical name.
 2. Select the matching **Timestamp format**:
@@ -50,11 +51,13 @@ Use this when the source exposes a date/time field that is updated whenever new 
 
 Choose a time field, **not a temperature, energy counter, battery percentage or other measurement**. Do not choose a clock that keeps ticking independently of delivery. A field's title or numeric type cannot prove its meaning; consult the source's documentation if uncertain.
 
+The picker offers fields with recognizable current time values and a human-readable preview. If no suitable field exists, choose Device activity or Flow confirmation. Previously saved fields remain editable with a warning if missing or no longer recognized.
+
 If only one supported field is listed, it is automatically selected. You must still check that it represents a real delivery time. If several fields are selected, a new timestamp in **any one** counts as an update. This does not confirm that every measurement is fresh.
 
 For the optional local test device, choose **Last test heartbeat** (`last_test_heartbeat`) and the ISO format.
 
-### Explicit heartbeat
+### Flow confirmation
 
 Use this when a Flow, integration or API can explicitly confirm that a delivery succeeded. A heartbeat is simply that confirmation.
 
@@ -66,22 +69,24 @@ Selecting this method does not create a heartbeat sender. If your source cannot 
 
 ## Choosing the timing
 
-**Expected update interval (minutes)** describes how often the source normally reports activity or new data.
+**Expected every** (shared setup timing) describes how often the source normally reports activity or new data.
 
-**Consider stale after (minutes)** is the longest gap without a valid update before the source is treated as stale. It is this timeout that determines when an update is overdue; the expected interval helps you choose a sensible timeout.
+**Notify after** (shared setup timing) is the longest gap without a valid update before the source is treated as stale. It is this timeout that determines when an update is overdue; the expected interval helps you choose a sensible timeout.
 
 For example, if a source normally reports every **5 minutes**, you might set:
 
-| Setting                  | Example    |
-| ------------------------ | ---------- |
-| Expected update interval | 5 minutes  |
-| Consider stale after     | 15 minutes |
+| Setting        | Example    |
+| -------------- | ---------- |
+| Expected every | 5 minutes  |
+| Notify after   | 15 minutes |
+
+These shared values apply to every selected source unless you choose **Use different timing** for it under **Adjust settings per device**. **Use shared timing again** removes that override. Saved monitors remain independent. In individual editing, these fields are called **Expected update interval (minutes)** and **Consider stale after (minutes)**.
 
 This allows some margin for delayed updates. A very tight timeout may produce unnecessary incidents. A much longer timeout takes longer to warn you.
 
 - Both values must be greater than zero.
 - The stale timeout must be at least the expected interval.
-- Device activity and Delivery timestamp require a stale timeout of at least **2 minutes**.
+- Device activity and Last data received require a stale timeout of at least **2 minutes**.
 - The input arrows use **0.5-minute steps**. `0.5` means 30 seconds; `1.5` means 90 seconds.
 - The maximum accepted duration is one year. The existing validation still accepts manually entered values that meet the timing rules; half-minute arrow steps do not change the monitoring rules.
 
@@ -91,20 +96,20 @@ For sources that only report when something happens, a quiet period may be norma
 
 ## Understanding monitor statuses
 
-| Status              | Meaning                                                                                                                        | What to do                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| **WARMING_UP**      | Waiting for a fresh update after setup, restart or a change to detection settings.                                             | Allow the source to report and check that the chosen signal is valid. |
-| **HEALTHY**         | Recent valid activity or data delivery has been confirmed.                                                                     | No action is needed for this signal.                                  |
-| **SUSPECTED_STALE** | The signal is overdue; Data Pulse is waiting briefly before declaring an incident.                                             | Check whether updates resume or an incident follows.                  |
-| **DEVICE_STALE**    | The device has missed the configured stale period and an incident is active. It may be part of a grouped integration incident. | Investigate the device or source integration.                         |
-| **RECOVERING**      | Fresh updates have returned, but stable recovery has not yet been confirmed.                                                   | Allow updates to continue.                                            |
-| **DISABLED**        | Monitoring is turned off for this monitor.                                                                                     | Enable it when you want monitoring to resume.                         |
-| **MISSING**         | The configured device or required timestamp field cannot currently be found.                                                   | Refresh status and check the device and selected field.               |
-| **UNKNOWN**         | Data Pulse cannot currently determine a reliable state, for example because observation is unavailable.                        | Check Observation status and Homey's availability.                    |
+| Status             | Meaning                                                                                                                        | What to do                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| **Starting**       | Waiting for a fresh update after setup, restart or a change to detection settings.                                             | Allow the source to report and check that the chosen signal is valid. |
+| **Healthy**        | Recent valid activity or data delivery has been confirmed.                                                                     | No action is needed for this signal.                                  |
+| **Update delayed** | The signal is overdue; Data Pulse is waiting briefly before declaring an incident.                                             | Check whether updates resume or an incident follows.                  |
+| **No data**        | The device has missed the configured stale period and an incident is active. It may be part of a grouped integration incident. | Investigate the device or source integration.                         |
+| **Recovering**     | Fresh updates have returned, but stable recovery has not yet been confirmed.                                                   | Allow updates to continue.                                            |
+| **Disabled**       | Monitoring is turned off for this monitor.                                                                                     | Enable it when you want monitoring to resume.                         |
+| **Missing**        | The configured device or required timestamp field cannot currently be found.                                                   | Refresh and check the device and selected field.                      |
+| **Unknown**        | Data Pulse cannot currently determine a reliable state, for example because observation is unavailable.                        | Check Observation status and Homey's availability.                    |
 
-The card's **Last delivery** shows the most recently accepted signal. With Device activity, it represents accepted activity, not necessarily a new measurement. **Technical details** contains the exact time and identifiers if you need support.
+The row's **Last received** (or **Last activity** for Device activity) shows the most recently accepted signal. With Device activity, it represents accepted activity, not necessarily a new measurement. **Technical details** in the **More menu (•••)** contains the exact time and identifiers if you need support.
 
-**Observation status** describes Data Pulse's ability to observe Homey. **Connected** does not mean every monitored device is healthy. **Dispatch failures** counts failed attempts to send Data Pulse events to Flows; zero is not proof that a push arrived on your phone. Full troubleshooting information is available under **Diagnostics**.
+**Observation status** describes Data Pulse's ability to observe Homey. **Connected** does not mean every monitored device is healthy. **Dispatch failures** counts failed attempts to send Data Pulse events to Flows; zero is not proof that a push arrived on your phone. Full troubleshooting information is available under **Test & diagnostics**.
 
 ## Getting notifications
 
@@ -121,19 +126,21 @@ An example message is “Data Pulse: a source has stopped reporting.” Use the 
 
 For recovery notifications, create a separate Flow with **Data Pulse incident recovered**, for example “Data Pulse: reporting has recovered.”
 
-You can add your own Flow conditions to limit which incidents are reported. Avoid sending the same notification from both an **Data Pulse incident** trigger and a device- or integration-specific trigger, unless you deliberately want both.
+You can add your own Flow conditions to limit which incidents are reported. Avoid sending the same notification from both a **Data Pulse incident** trigger and a device- or integration-specific trigger, unless you deliberately want both.
 
 If several monitored devices from the same integration stop reporting together, Data Pulse can treat them as one integration incident. The general **Data Pulse incident** cards cover both individual and grouped incidents, which helps avoid a burst of separate messages for one shared problem.
 
 ## Editing and disabling monitors
 
-Select **Edit** on a monitor card to load its settings. **Save changes** updates that same monitor; it does not create a duplicate. **Cancel** discards the unsaved draft. If saving fails, the draft stays available and an error explains what to check.
+Open a monitor’s **More menu (•••)** and select **Edit** to load its settings. **Save changes** updates that same monitor; it does not create a duplicate. **Cancel** discards the unsaved draft. If saving fails, the draft stays available and an error explains what to check.
 
 The integration and device remain fixed during editing. To monitor a different device, add a monitor for that device instead.
 
-Changes to the freshness method, selected timestamp fields, format or timing start a new observation period. Disabling and re-enabling monitoring also requires fresh updates. Do not interpret a new WARMING_UP period after such a change as evidence of a device failure.
+Changes to the freshness method, selected timestamp fields, format or timing start a new observation period. Disabling and re-enabling monitoring also requires fresh updates. Do not interpret a new Starting period after such a change as evidence of a device failure.
 
 **Technical note** under **Advanced (optional)** is just a reminder of why you trust the chosen signal. It is optional and does not affect detection, restart monitoring or reset an incident's recovery progress.
+
+The same More menu also contains these actions:
 
 - **Disable** stops monitoring that device while keeping its configuration.
 - **Enable** resumes monitoring with a fresh observation period.
@@ -148,44 +155,44 @@ The optional **Data Pulse Test Source (simulation)** lets you safely test stale 
 ### Set up the optional device
 
 1. In Homey, add **Data Pulse Test Source (simulation)** from Data Pulse's devices. If it is already paired, use that existing device.
-2. Open Data Pulse settings and use **Refresh status**. Newly added devices may take around a minute to appear.
-3. Add a monitor for the test device, or edit its existing monitor.
-4. Choose **Delivery timestamp**, **Last test heartbeat**, ISO format, an expected interval of **0.5 minutes** and a stale timeout of **3 minutes**. The technical note can remain empty.
+2. Open Data Pulse settings and use **Refresh**. Newly added devices may take around a minute to appear.
+3. Choose **+ Add monitor → Last data received → Select devices**, select the test device and confirm with **Use selection**. For an existing monitor, use **More (•••) → Edit** instead.
+4. Set the timing to **0.5 minutes** expected and **3 minutes** before notification. Under **Adjust settings per device**, check **Last test heartbeat** and ISO format. The technical note can remain empty. Save, then open **Test & diagnostics → Local self-test**.
 
 ### Understand the controls
 
-| Control             | What happens                                                                                    |
-| ------------------- | ----------------------------------------------------------------------------------------------- |
-| **Start heartbeat** | Sends a heartbeat now, then every 30 seconds. Status becomes RUNNING.                           |
-| **Stop**            | Stops generating heartbeats. The last test timestamp stays unchanged.                           |
-| **Send once**       | Sends one heartbeat without starting a stopped simulator. If already RUNNING, it stays running. |
+| Control        | What happens                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| **Start test** | Sends a heartbeat now, then every 30 seconds. Status becomes Running.                           |
+| **Stop**       | Stops generating heartbeats. The last test timestamp stays unchanged.                           |
+| **Send once**  | Sends one heartbeat without starting a stopped simulator. If already Running, it stays running. |
 
-After every app restart, the simulator deliberately starts **STOPPED**. Restarting it is not itself a test heartbeat. Its previous timestamp may still be displayed.
+After every app restart, the simulator deliberately starts **Stopped**. Restarting it is not itself a test heartbeat. Its previous timestamp may still be displayed.
 
 ### Try an incident and recovery
 
-1. Start the heartbeat and use Refresh status until the monitor is HEALTHY.
+1. Start the heartbeat and use Refresh until the monitor is Healthy.
 2. Stop it. The last timestamp should stop advancing.
-3. Wait through the configured stale timeout and the brief confirmation period. The monitor should pass through SUSPECTED_STALE to DEVICE_STALE.
+3. Wait through the configured stale timeout and the brief confirmation period. The monitor should pass through Update delayed to No data.
 4. If configured, your normal incident Flow sends a real test notification.
-5. Start the heartbeat again. The monitor should move through RECOVERING to HEALTHY once recovery is stable. A configured recovery Flow can send a second notification.
+5. Start the heartbeat again. The monitor should move through Recovering to Healthy once recovery is stable. A configured recovery Flow can send a second notification.
 6. When finished, disable only the **test monitor** and stop the simulator so it does not produce another planned stale incident.
 
-The same device can be used with **Explicit heartbeat** or **Device activity** by editing its monitor. With Explicit heartbeat, **Send once** can confirm a delivery while the simulator remains STOPPED. Device activity relies on Homey's actual last-seen information. Test each method in turn; there is one monitor per device.
+The same device can be used with **Flow confirmation** or **Device activity** by editing its monitor. With Flow confirmation, **Send once** can confirm a delivery while the simulator remains Stopped. Device activity relies on Homey's actual last-seen information. Test each method in turn; there is one monitor per device.
 
 ## Troubleshooting
 
-### A monitor stays WARMING_UP
+### A monitor stays Starting
 
 Data Pulse is waiting for fresh evidence after setup, restart or a detection-setting change. An old displayed value is not enough. Check that the source is actually producing new activity or delivery confirmations, and that the chosen freshness method matches that source. Also check Observation status; interruptions can start a new observation period.
 
-### A monitor becomes MISSING
+### A monitor becomes Missing
 
-Use **Refresh status** and check that the device still exists and the selected timestamp field is still available. The device list may not yet reflect a recent addition or an integration change.
+Use **Refresh** and check that the device still exists and the selected timestamp field is still available. The device list may not yet reflect a recent addition or an integration change.
 
-A normal rename alone does not break monitoring: Data Pulse follows the device's identity. After renaming, look for its current name. A deleted and re-added device may have a new identity and require a new monitor. A disappeared timestamp field needs a suitable replacement in Edit. MISSING is not treated as recovery.
+A normal rename alone does not break monitoring: Data Pulse follows the device's identity. After renaming, look for its current name. A deleted and re-added device may have a new identity and require a new monitor. A disappeared timestamp field needs a suitable replacement in Edit. Missing is not treated as recovery.
 
-### Delivery timestamp never becomes HEALTHY
+### Last data received never becomes Healthy
 
 Check all three points:
 
@@ -195,11 +202,11 @@ Check all three points:
 
 If you do not know what a field means, check the integration's documentation before relying on it.
 
-### Device activity never becomes HEALTHY
+### Device activity never becomes Healthy
 
-Not every device or integration supplies reliable last-seen information. A visible or available device does not guarantee that this time is updated. If activity is not reported, use Delivery timestamp or Explicit heartbeat when the source supports one of them.
+Not every device or integration supplies reliable last-seen information. A visible or available device does not guarantee that this time is updated. If activity is not reported, use Last data received or Flow confirmation when the source supports one of them.
 
-### Explicit heartbeat never becomes HEALTHY
+### Flow confirmation never becomes Healthy
 
 Choosing this method does not automatically send confirmations. Check that the Flow or integration actually confirms a successful delivery to the intended monitor and supplies that delivery's timestamp. Repeating an old timestamp does not create new evidence. Do not replace a missing success signal with a blind timer.
 
@@ -222,21 +229,21 @@ A single device problem can be reported individually. When several monitors from
 
 ### Add monitor or Save changes does not succeed
 
-Read the message next to the action and the highlighted field. Check device selection, timestamp selection and timing. No timestamp fields are needed for Device activity or Explicit heartbeat. Technical note can be empty.
+Read the message next to the action and the highlighted field. Check device selection, timestamp selection and timing. No timestamp fields are needed for Device activity or Flow confirmation. Technical note can be empty.
 
-After a failed save, your draft remains available. After a successful save followed by a status-refresh failure, the message says the monitor was saved; use Refresh status instead of creating another monitor.
+After a failed save, your draft remains available. After a successful save followed by a status-refresh failure, the message says the monitor was saved; use Refresh instead of creating another monitor.
 
 ## Good monitoring examples
 
 ### Temperature sensor or thermostat
 
-A steady temperature is normal, so “temperature did not change” is not a useful failure signal. If the source has reliable last-seen information, Device activity may check that it is still active. If it provides a genuine time of its most recent data delivery, prefer Delivery timestamp for checking that delivery.
+A steady temperature is normal, so “temperature did not change” is not a useful failure signal. If the source has reliable last-seen information, Device activity may check that it is still active. If it provides a genuine time of its most recent data delivery, prefer Last data received for checking that delivery.
 
 Allow timing margins appropriate to the actual reporting schedule. A battery-powered sensor may report less frequently than a mains-powered thermostat.
 
 ### Periodically synchronized integration
 
-An integration that normally completes a synchronization every five minutes could expose the completion time as a Delivery timestamp. Alternatively, if it can send a confirmation after a successful synchronization, Explicit heartbeat may be suitable. A five-minute expected interval and fifteen-minute stale timeout is a possible starting point, not a universal recommendation.
+An integration that normally completes a synchronization every five minutes could expose the completion time as a time field for Last data received. Alternatively, if it can send a confirmation after a successful synchronization, Flow confirmation may be suitable. A five-minute expected interval and fifteen-minute stale timeout is a possible starting point, not a universal recommendation.
 
 A failed synchronization must not update the success timestamp or send a success heartbeat.
 

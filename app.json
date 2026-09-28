@@ -31,7 +31,8 @@
     "last_test_heartbeat": {
       "type": "string",
       "title": {
-        "en": "Last test heartbeat"
+        "en": "Last test heartbeat",
+        "nl": "Laatste testbevestiging"
       },
       "getable": true,
       "setable": false,
