@@ -2,7 +2,7 @@
   "name": "homey-data-watchdog",
   "version": "0.1.0",
   "private": true,
-  "description": "Evidence-based local integration monitoring for Homey SHS and Pro",
+  "description": "Data Pulse: opt-in monitoring of selected Homey sources for confirmed activity and fresh data",
   "main": "app.js",
   "engines": {
     "node": ">=22"

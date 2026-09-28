@@ -34,7 +34,7 @@ class DataWatchdogApp extends Homey.App {
         .catch(() => this.error('Watchdog evaluation/checkpoint failed'));
     }, DEFAULTS.schedulerMs);
     this.log(
-      'Data Watchdog initialized; configured monitors:',
+      'Data Pulse initialized; configured monitors:',
       this.service.engine.config.monitors.length,
     );
   }
@@ -57,7 +57,7 @@ class DataWatchdogApp extends Homey.App {
     if (action !== 'start' && action !== 'stop' && action !== 'send')
       throw new Error('Unknown test source action');
     if (!this.testSource)
-      throw new Error('Add the Data Watchdog Test Source device first');
+      throw new Error('Add the Data Pulse Test Source device first');
     await this.testSource.action(action);
   }
 

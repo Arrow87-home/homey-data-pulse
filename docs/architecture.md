@@ -1,4 +1,4 @@
-# Homey Data Watchdog — architecture decision record
+# Homey Data Pulse — architecture decision record
 
 Research date: 2026-09-17. Status: implementation design; no installation or experiment on a live Homey has been performed.
 

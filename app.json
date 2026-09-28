@@ -6,8 +6,8 @@
   "runtime": "nodejs",
   "platforms": ["local"],
   "name": {
-    "en": "Data Watchdog",
-    "nl": "Data Watchdog"
+    "en": "Data Pulse",
+    "nl": "Data Pulse"
   },
   "description": {
     "en": "Know when your Homey data stops arriving",
@@ -43,7 +43,8 @@
     {
       "id": "test-source",
       "name": {
-        "en": "Data Watchdog Test Source (simulation)"
+        "en": "Data Pulse Test Source (simulation)",
+        "nl": "Data Pulse Testbron (simulatie)"
       },
       "class": "sensor",
       "images": {
@@ -1047,7 +1048,8 @@
           "en": "Start test heartbeat"
         },
         "hint": {
-          "en": "Local Data Watchdog simulation only. Requires the optional test source device."
+          "en": "Local Data Pulse simulation only. Requires the optional test source device.",
+          "nl": "Alleen een lokale Data Pulse-simulatie. Vereist het optionele testbronapparaat."
         }
       },
       {
@@ -1056,7 +1058,8 @@
           "en": "Stop test heartbeat"
         },
         "hint": {
-          "en": "Local Data Watchdog simulation only. Requires the optional test source device."
+          "en": "Local Data Pulse simulation only. Requires the optional test source device.",
+          "nl": "Alleen een lokale Data Pulse-simulatie. Vereist het optionele testbronapparaat."
         }
       },
       {
@@ -1065,7 +1068,8 @@
           "en": "Send test heartbeat now"
         },
         "hint": {
-          "en": "Local Data Watchdog simulation only. Requires the optional test source device."
+          "en": "Local Data Pulse simulation only. Requires the optional test source device.",
+          "nl": "Alleen een lokale Data Pulse-simulatie. Vereist het optionele testbronapparaat."
         }
       },
       {

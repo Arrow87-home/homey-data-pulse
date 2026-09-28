@@ -217,7 +217,7 @@ for (const kind of [
       }),
       apps: {
         async getApps() {
-          return { [TEST_APP_ID]: { id: TEST_APP_ID, name: 'Data Watchdog' } };
+          return { [TEST_APP_ID]: { id: TEST_APP_ID, name: 'Data Pulse' } };
         },
       },
       zones: {
@@ -236,7 +236,7 @@ for (const kind of [
           deviceId: device.id,
           deviceName: device.name,
           sourceAppId: TEST_APP_ID,
-          sourceAppName: 'Data Watchdog',
+          sourceAppName: 'Data Pulse',
           strategy:
             kind === 'timestamp-capability'
               ? { kind, capabilities: [TEST_CAPABILITY], encoding: 'iso' }
@@ -338,7 +338,7 @@ test('manual self-test routing rejects lookalikes and does not heartbeat product
     {
       production: {
         id: 'production',
-        name: 'Data Watchdog Test Source',
+        name: 'Data Pulse Test Source',
         ownerUri: 'homey:app:plugwise',
         driverId: 'homey:app:plugwise:test-source',
         data: { id: TEST_DATA_ID },

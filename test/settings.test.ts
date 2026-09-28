@@ -1264,7 +1264,7 @@ test('built-in Help stays collapsed and retains every localized topic without st
       'Any watchdog incident started',
       'Any watchdog incident recovered',
       'Homey',
-      'Data Watchdog',
+      'Data Pulse',
       language === 'nl' ? '21,3 °C' : '21.3 °C',
     ])
       assert.ok(plain.includes(phrase), phrase);
@@ -1284,7 +1284,7 @@ test('built-in Help stays collapsed and retains every localized topic without st
 test('standalone user guide is linked from README and covers setup, notifications, troubleshooting and limitations', () => {
   const guide = readFileSync('docs/user-guide.md', 'utf8');
   for (const heading of [
-    'What Data Watchdog does',
+    'What Data Pulse does',
     'Quick start',
     'Choosing a freshness method',
     'Choosing the timing',

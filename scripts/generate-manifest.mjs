@@ -51,7 +51,7 @@ const manifest = {
   compatibility: '>=12.9.0',
   runtime: 'nodejs',
   platforms: ['local'],
-  name: { en: 'Data Watchdog', nl: 'Data Watchdog' },
+  name: { en: 'Data Pulse', nl: 'Data Pulse' },
   description: {
     en: 'Know when your Homey data stops arriving',
     nl: 'Weet wanneer je Homey-data niet meer binnenkomt',
@@ -81,7 +81,10 @@ const manifest = {
   drivers: [
     {
       id: 'test-source',
-      name: { en: 'Data Watchdog Test Source (simulation)' },
+      name: {
+        en: 'Data Pulse Test Source (simulation)',
+        nl: 'Data Pulse Testbron (simulatie)',
+      },
       class: 'sensor',
       images: {
         small: '/drivers/test-source/assets/images/small.png',
@@ -131,7 +134,8 @@ const manifest = {
         id: `${action}_test_heartbeat`,
         title: { en: title },
         hint: {
-          en: 'Local Data Watchdog simulation only. Requires the optional test source device.',
+          en: 'Local Data Pulse simulation only. Requires the optional test source device.',
+          nl: 'Alleen een lokale Data Pulse-simulatie. Vereist het optionele testbronapparaat.',
         },
       })),
       { id: 'check_all', title: { en: 'Check all monitors now' } },

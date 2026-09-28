@@ -4,5 +4,9 @@
   },
   "0.1.1": {
     "en": "Improved app icon rendering in the Homey App Store and Flow cards."
+  },
+  "0.1.2": {
+    "en": "Data Watchdog is now Data Pulse. Existing monitoring behaviour, configurations, devices and Flows remain compatible without migration. Refreshed Settings make selected-source setup and monitor management clearer, with complete English and Dutch interface text.",
+    "nl": "Data Watchdog heet voortaan Data Pulse. Bestaand bewakingsgedrag, configuraties, apparaten en Flows blijven zonder migratie compatibel. De vernieuwde Settings maken het instellen en beheren van geselecteerde bronnen overzichtelijker, met een volledige Nederlandse en Engelse interface."
   }
 }

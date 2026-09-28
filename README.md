@@ -1,10 +1,16 @@
-# Homey Data Watchdog
+# Data Pulse
 
 Lokale watchdog voor aantoonbare datalevering en apparaatactiviteit, met gebundelde storingsmeldingen per bron-app. **Homey Self-Hosted Server is het primaire doelplatform**, naast Homey Pro 2023/mini/2026.
 
 Status: v0.1 ontwikkelbasis. De gebruiker heeft de app succesvol in development mode op SHS gestart. Deze uitbreiding is uitsluitend offline gevalideerd; er is tijdens deze wijziging niets op een live Homey geïnstalleerd of gewijzigd. Zie [onderzoek en architectuur](docs/architecture.md), [toestandsmodellen](docs/state-machines.md), [SHS-matrix](docs/shs-compatibility.md) en [opleverrapport](docs/delivery-report.md).
 
-New to Data Watchdog? Start with the [User Guide](docs/user-guide.md). The settings page also includes a built-in **How to use Data Watchdog** section, available without opening GitHub.
+New to Data Pulse? Start with the [User Guide](docs/user-guide.md). The settings page also includes a built-in **Help** section, available without opening GitHub.
+
+## Bewust geselecteerde bronnen
+
+Data Pulse bewaakt alleen bronnen die je zelf toevoegt. Je kiest per bron expliciet bewijs van apparaatactiviteit, een tijdveld met de laatste gegevensontvangst of een bevestiging na een geslaagde levering. De app combineert samenhangende storingen en bevestigt stabiel herstel voor die geselecteerde bronnen.
+
+Dit is geen automatische bewaking van alle apparaten, batterijniveaus of beschikbaarheid. De focus ligt op de versheid en betrouwbaarheid van data waar je op vertrouwt.
 
 ## Wat wordt werkelijk bewaakt?
 
@@ -58,7 +64,7 @@ Voor geavanceerde correlatie-instellingen blijft de geauthenticeerde config-API 
 
 ## Lokale self-test
 
-Voeg optioneel één **Data Watchdog Test Source (simulation)** toe via Homey Devices. De eigen bron genereert iedere 30 seconden een ISO-timestamp, een expliciete native SDK-activiteitsmelding en indien geconfigureerd een manual heartbeat via de bestaande service. Er zijn geen writes naar andere apparaten. Start/stop/send staan in app-settings en als drie Flow-acties. Na iedere app-restart start de bron **gestopt**; de laatste echte timestamp blijft staan.
+Voeg optioneel één **Data Pulse Test Source (simulation)** toe via Homey Devices. De eigen bron genereert iedere 30 seconden een ISO-timestamp, een expliciete native SDK-activiteitsmelding en indien geconfigureerd een manual heartbeat via de bestaande service. Er zijn geen writes naar andere apparaten. Start/stop/send staan in app-settings en als drie Flow-acties. Na iedere app-restart start de bron **gestopt**; de laatste echte timestamp blijft staan.
 
 Volg de [veilige SHS-acceptatietest en beperkingen](docs/self-test.md). Manual en timestamp zijn deterministisch testbaar. `device-last-seen` gebruikt de officiële `Device.setLastSeenAt()`; daadwerkelijke SHS-publicatie en freeze moeten nog handmatig worden bevestigd. Een capability-update alleen wordt niet als automatische lastSeen-garantie beschouwd.
 

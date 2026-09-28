@@ -32,26 +32,34 @@ function load<T>(
   return module.exports as T;
 }
 
-test('SDK pairing offers one recognizable device and refuses an additional source', async () => {
-  let paired = false;
-  class Driver {
-    getDevices() {
-      return paired ? [{}] : [];
+for (const language of ['en', 'nl'])
+  test(`SDK pairing offers one localized Data Pulse source and refuses an additional source (${language})`, async () => {
+    let paired = false;
+    const locale = JSON.parse(readFileSync(`locales/${language}.json`, 'utf8'));
+    class Driver {
+      homey = { __: (key: string) => locale[key] };
+      getDevices() {
+        return paired ? [{}] : [];
+      }
     }
-  }
-  const Actual = load<
-    new () => {
-      onPairListDevices(): Promise<{ name: string; data: { id: string } }[]>;
-    }
-  >('drivers/test-source/driver.ts', { Driver });
-  const driver = new Actual();
-  const devices = await driver.onPairListDevices();
-  assert.equal(devices.length, 1);
-  assert.match(devices[0].name, /simulation/);
-  assert.equal(devices[0].data.id, testSource.TEST_DATA_ID);
-  paired = true;
-  assert.equal((await driver.onPairListDevices()).length, 0);
-});
+    const Actual = load<
+      new () => {
+        onPairListDevices(): Promise<{ name: string; data: { id: string } }[]>;
+      }
+    >('drivers/test-source/driver.ts', { Driver });
+    const driver = new Actual();
+    const devices = await driver.onPairListDevices();
+    assert.equal(devices.length, 1);
+    assert.equal(
+      devices[0].name,
+      language === 'en'
+        ? 'Data Pulse Test Source (simulation)'
+        : 'Data Pulse Testbron (simulatie)',
+    );
+    assert.equal(devices[0].data.id, testSource.TEST_DATA_ID);
+    paired = true;
+    assert.equal((await driver.onPairListDevices()).length, 0);
+  });
 
 test('real SDK device init/reinit/delete/uninit has one controller, own-capability writes, native no-argument activity and complete cleanup', async () => {
   let now = 1_000_000;

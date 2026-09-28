@@ -1,5 +1,7 @@
 # Opleverrapport: editing en geïsoleerde self-test
 
+> Historisch rapport van vóór de naamswijziging. De huidige productnaam is Data Pulse; oorspronkelijke productnamen en testresultaten hieronder zijn behouden.
+
 Uitbreiding van `codex/watchdog-v0.1`, bestaande draft PR #1; geen merge. Er is geen live Homey benaderd, geïnstalleerd of gewijzigd. Dependencies en lockfile zijn ongewijzigd.
 
 ## Resultaat

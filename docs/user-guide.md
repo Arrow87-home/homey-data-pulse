@@ -1,20 +1,20 @@
-# Data Watchdog User Guide
+# Data Pulse User Guide
 
-Data Watchdog helps you notice when a Homey device or integration stops reporting. This guide explains how to choose a useful signal, set up a monitor and receive notifications. You only need to know how to open an app's settings and create a Homey Flow.
+Data Pulse helps you notice when a Homey device or integration stops reporting. This guide explains how to choose a useful signal, set up a monitor and receive notifications. You only need to know how to open an app's settings and create a Homey Flow.
 
-Open **Data Watchdog → Settings** to configure monitoring. The same basic guidance is available there under **How to use Data Watchdog**, without opening a website.
+Open **Data Pulse → Settings** to configure monitoring. The same basic guidance is available there under **Help**, without opening a website.
 
-## What Data Watchdog does
+## What Data Pulse does
 
-A device can remain visible in Homey even when its source has stopped sending updates. Data Watchdog watches a signal that confirms activity or successful data delivery. If that signal is absent for too long, it detects an incident. When updates return and remain stable, it closes the incident.
+A device can remain visible in Homey even when its source has stopped sending updates. Data Pulse watches a signal that confirms activity or successful data delivery. If that signal is absent for too long, it detects an incident. When updates return and remain stable, it closes the incident.
 
 It does **not** simply check whether a measurement changes. A temperature can stay at **21.3 °C** for hours while the sensor works perfectly. The useful question is whether the source is still reporting, not whether the room temperature changed.
 
-You choose which devices to monitor. New devices are not monitored automatically, and you do not need to monitor every device. Data Watchdog does not repair or restart a failing integration.
+You choose which devices to monitor. New devices are not monitored automatically, and you do not need to monitor every device. Data Pulse does not repair or restart a failing integration.
 
 ## Quick start
 
-1. Open Data Watchdog's settings and find **Add monitor**.
+1. Open Data Pulse's settings and find **Add monitor**.
 2. Choose the **Integration** and **Device** you want to monitor.
 3. Under **How should freshness be checked?**, choose a method supported by that source. Use the guidance below rather than guessing.
 4. Enter the **Expected update interval (minutes)**: how often the source normally reports.
@@ -58,7 +58,7 @@ For the optional local test device, choose **Last test heartbeat** (`last_test_h
 
 Use this when a Flow, integration or API can explicitly confirm that a delivery succeeded. A heartbeat is simply that confirmation.
 
-For example, an integration might run a successful synchronization and then notify Data Watchdog. In a Flow, the Data Watchdog action **Record a confirmed delivery** takes the chosen monitor and the actual delivery timestamp in ISO format with timezone. The integration or Flow must supply that information from the successful delivery.
+For example, an integration might run a successful synchronization and then notify Data Pulse. In a Flow, the Data Pulse action **Record a confirmed delivery** takes the chosen monitor and the actual delivery timestamp in ISO format with timezone. The integration or Flow must supply that information from the successful delivery.
 
 Selecting this method does not create a heartbeat sender. If your source cannot provide a success signal and its delivery time, another method may be more suitable. API setup is an option for integration developers; ordinary users do not need to write API calls to use the other methods.
 
@@ -85,7 +85,7 @@ This allows some margin for delayed updates. A very tight timeout may produce un
 - The input arrows use **0.5-minute steps**. `0.5` means 30 seconds; `1.5` means 90 seconds.
 - The maximum accepted duration is one year. The existing validation still accepts manually entered values that meet the timing rules; half-minute arrow steps do not change the monitoring rules.
 
-An incident may be reported slightly after the stale timeout because Data Watchdog briefly waits to confirm and group related problems. Recovery is also confirmed over a stable period, rather than immediately closing an incident after one returning update.
+An incident may be reported slightly after the stale timeout because Data Pulse briefly waits to confirm and group related problems. Recovery is also confirmed over a stable period, rather than immediately closing an incident after one returning update.
 
 For sources that only report when something happens, a quiet period may be normal. Choose a suitable periodic activity signal if one exists; otherwise this form of monitoring may not fit that device.
 
@@ -95,35 +95,35 @@ For sources that only report when something happens, a quiet period may be norma
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
 | **WARMING_UP**      | Waiting for a fresh update after setup, restart or a change to detection settings.                                             | Allow the source to report and check that the chosen signal is valid. |
 | **HEALTHY**         | Recent valid activity or data delivery has been confirmed.                                                                     | No action is needed for this signal.                                  |
-| **SUSPECTED_STALE** | The signal is overdue; Data Watchdog is waiting briefly before declaring an incident.                                          | Check whether updates resume or an incident follows.                  |
+| **SUSPECTED_STALE** | The signal is overdue; Data Pulse is waiting briefly before declaring an incident.                                             | Check whether updates resume or an incident follows.                  |
 | **DEVICE_STALE**    | The device has missed the configured stale period and an incident is active. It may be part of a grouped integration incident. | Investigate the device or source integration.                         |
 | **RECOVERING**      | Fresh updates have returned, but stable recovery has not yet been confirmed.                                                   | Allow updates to continue.                                            |
 | **DISABLED**        | Monitoring is turned off for this monitor.                                                                                     | Enable it when you want monitoring to resume.                         |
 | **MISSING**         | The configured device or required timestamp field cannot currently be found.                                                   | Refresh status and check the device and selected field.               |
-| **UNKNOWN**         | Data Watchdog cannot currently determine a reliable state, for example because observation is unavailable.                     | Check Observation status and Homey's availability.                    |
+| **UNKNOWN**         | Data Pulse cannot currently determine a reliable state, for example because observation is unavailable.                        | Check Observation status and Homey's availability.                    |
 
 The card's **Last delivery** shows the most recently accepted signal. With Device activity, it represents accepted activity, not necessarily a new measurement. **Technical details** contains the exact time and identifiers if you need support.
 
-**Observation status** describes Data Watchdog's ability to observe Homey. **Connected** does not mean every monitored device is healthy. **Dispatch failures** counts failed attempts to send watchdog events to Flows; zero is not proof that a push arrived on your phone. Full troubleshooting information is available under **Diagnostics**.
+**Observation status** describes Data Pulse's ability to observe Homey. **Connected** does not mean every monitored device is healthy. **Dispatch failures** counts failed attempts to send watchdog events to Flows; zero is not proof that a push arrived on your phone. Full troubleshooting information is available under **Diagnostics**.
 
 ## Getting notifications
 
-Data Watchdog detects incidents but does **not** automatically send every user a push notification. Homey Flows let you decide who receives messages, which incidents matter and whether to announce recovery.
+Data Pulse detects incidents but does **not** automatically send every user a push notification. Homey Flows let you decide who receives messages, which incidents matter and whether to announce recovery.
 
 Create a Flow such as:
 
 | Flow part | Choose                                                                      |
 | --------- | --------------------------------------------------------------------------- |
-| **WHEN**  | Data Watchdog → **Any watchdog incident started**                           |
+| **WHEN**  | Data Pulse → **Any watchdog incident started**                              |
 | **THEN**  | Homey's **Send a push notification** action; choose a recipient and message |
 
-An example message is “Data Watchdog: a source has stopped reporting.” Use the integration/device information supplied by the trigger to make the message more useful. Exact Homey action wording may vary with your language and app version.
+An example message is “Data Pulse: a source has stopped reporting.” Use the integration/device information supplied by the trigger to make the message more useful. Exact Homey action wording may vary with your language and app version.
 
-For recovery notifications, create a separate Flow with **Any watchdog incident recovered**, for example “Data Watchdog: reporting has recovered.”
+For recovery notifications, create a separate Flow with **Any watchdog incident recovered**, for example “Data Pulse: reporting has recovered.”
 
 You can add your own Flow conditions to limit which incidents are reported. Avoid sending the same notification from both an **Any watchdog incident** trigger and a device- or integration-specific trigger, unless you deliberately want both.
 
-If several monitored devices from the same integration stop reporting together, Data Watchdog can treat them as one integration incident. The general **Any watchdog incident** cards cover both individual and grouped incidents, which helps avoid a burst of separate messages for one shared problem.
+If several monitored devices from the same integration stop reporting together, Data Pulse can treat them as one integration incident. The general **Any watchdog incident** cards cover both individual and grouped incidents, which helps avoid a burst of separate messages for one shared problem.
 
 ## Editing and disabling monitors
 
@@ -143,12 +143,12 @@ Removing, disabling or changing detection rules during an incident may end that 
 
 ## Using the local self-test
 
-The optional **Data Watchdog Test Source (simulation)** lets you safely test stale detection, recovery and your notification Flows. It runs locally in Data Watchdog, does not control production devices, and does not require another integration or backend. It is not needed for everyday monitoring.
+The optional **Data Pulse Test Source (simulation)** lets you safely test stale detection, recovery and your notification Flows. It runs locally in Data Pulse, does not control production devices, and does not require another integration or backend. It is not needed for everyday monitoring.
 
 ### Set up the optional device
 
-1. In Homey, add **Data Watchdog Test Source (simulation)** from Data Watchdog's devices. If it is already paired, use that existing device.
-2. Open Data Watchdog settings and use **Refresh status**. Newly added devices may take around a minute to appear.
+1. In Homey, add **Data Pulse Test Source (simulation)** from Data Pulse's devices. If it is already paired, use that existing device.
+2. Open Data Pulse settings and use **Refresh status**. Newly added devices may take around a minute to appear.
 3. Add a monitor for the test device, or edit its existing monitor.
 4. Choose **Delivery timestamp**, **Last test heartbeat**, ISO format, an expected interval of **0.5 minutes** and a stale timeout of **3 minutes**. The technical note can remain empty.
 
@@ -177,13 +177,13 @@ The same device can be used with **Explicit heartbeat** or **Device activity** b
 
 ### A monitor stays WARMING_UP
 
-Data Watchdog is waiting for fresh evidence after setup, restart or a detection-setting change. An old displayed value is not enough. Check that the source is actually producing new activity or delivery confirmations, and that the chosen freshness method matches that source. Also check Observation status; interruptions can start a new observation period.
+Data Pulse is waiting for fresh evidence after setup, restart or a detection-setting change. An old displayed value is not enough. Check that the source is actually producing new activity or delivery confirmations, and that the chosen freshness method matches that source. Also check Observation status; interruptions can start a new observation period.
 
 ### A monitor becomes MISSING
 
 Use **Refresh status** and check that the device still exists and the selected timestamp field is still available. The device list may not yet reflect a recent addition or an integration change.
 
-A normal rename alone does not break monitoring: Data Watchdog follows the device's identity. After renaming, look for its current name. A deleted and re-added device may have a new identity and require a new monitor. A disappeared timestamp field needs a suitable replacement in Edit. MISSING is not treated as recovery.
+A normal rename alone does not break monitoring: Data Pulse follows the device's identity. After renaming, look for its current name. A deleted and re-added device may have a new identity and require a new monitor. A disappeared timestamp field needs a suitable replacement in Edit. MISSING is not treated as recovery.
 
 ### Delivery timestamp never becomes HEALTHY
 
@@ -218,7 +218,7 @@ A newly configured Flow does not replay an old incident start. To test the whole
 
 First check for overlapping Flows: using both a general incident trigger and a device-specific trigger for the same push can create duplicate notifications. Also check whether the source genuinely recovers and then stops reporting again, which can produce a new incident.
 
-A single device problem can be reported individually. When several monitors from the same integration stop reporting together, Data Watchdog can group them into one integration incident. Individual device statuses can still show a problem while the shared incident is active. The **Any watchdog incident** triggers are the simplest starting point for general notifications.
+A single device problem can be reported individually. When several monitors from the same integration stop reporting together, Data Pulse can group them into one integration incident. Individual device statuses can still show a problem while the shared incident is active. The **Any watchdog incident** triggers are the simplest starting point for general notifications.
 
 ### Add monitor or Save changes does not succeed
 
@@ -248,7 +248,7 @@ A button or door sensor can legitimately stay quiet for a long time. Do not decl
 
 - An unchanged measurement is not proof of a fault.
 - Device activity proves activity, not necessarily delivery of new measurement data.
-- Monitoring is only as reliable as the selected freshness signal. Data Watchdog cannot tell that a source is wrongly presenting old data as newly delivered.
+- Monitoring is only as reliable as the selected freshness signal. Data Pulse cannot tell that a source is wrongly presenting old data as newly delivered.
 - A wrong timestamp field can create false confidence. Confirm what updates it before relying on it.
 - Notifications depend on your Homey Flows and the phone's notification setup. A detected incident is not a guarantee that a phone received a message.
 - **A watchdog running on the same Homey cannot report a complete outage of that Homey while it is stopped.** For whole-host outage detection, you need a separate monitor running outside that Homey. External heartbeat or host monitoring could be a separate future solution; it is not provided by this app.

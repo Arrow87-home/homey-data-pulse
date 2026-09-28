@@ -1,5 +1,7 @@
 # Settings UX, validation and compatibility polish
 
+> Historisch rapport van vóór de naamswijziging. De huidige productnaam is Data Pulse; oorspronkelijke productnamen en testresultaten hieronder zijn behouden.
+
 18 september 2026 — dezelfde branch `codex/watchdog-v0.1` en draft PR #1. Geen merge, geen live Homey benaderd of geïnstalleerd. De bestaande testbron kan blijven staan. Engine-evaluatie, detectors, simulator, timers, heartbeatservice, API-routes en Flow-dispatch zijn niet herschreven.
 
 ## Oorzaak van het Add-probleem

@@ -1,5 +1,7 @@
 # Opleverrapport — 17 september 2026
 
+> Historisch rapport van vóór de naamswijziging. De huidige productnaam is Data Pulse; oorspronkelijke productnamen en testresultaten hieronder zijn behouden.
+
 ## Resultaat
 
 Fasen A–E zijn uitgewerkt als v0.1 ontwikkelbasis. De app is klaar voor code-review en een expliciet goedgekeurde SHS-testinstallatie. Er zijn geen live Homey-wijzigingen, app-restarts bij andere integraties of App Store-publicaties uitgevoerd.

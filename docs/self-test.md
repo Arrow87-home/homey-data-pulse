@@ -12,7 +12,7 @@ Datum: 18 september 2026. Branch: `codex/watchdog-v0.1`, bestaande PR #1. Geen m
 - Iedere app-/device-initialisatie begint **gestopt**. Alleen de laatste werkelijk gegenereerde capability-timestamp blijft door Homey bewaard. Geen opgeslagen enabled-state. Running/stopped, tijd, interval, native lastSeen-resultaat en aantal geaccepteerde manual heartbeats staan in settings; Refresh status haalt de actuele stand op.
 - De testbron schrijft uitsluitend naar zijn eigen capability en roept zijn eigen native SDK-methode aan. Geen API-devicewrites, andere integraties, cloud/backend, MQTT, self-healing of gewijzigde authenticatie. Alle nieuwe routes zijn `public: false`.
 
-De bestaande incidentengine en Flow-dispatch worden volledig gebruikt. Bestaande `any_incident_started`/`any_incident_recovered`-Flows ontvangen daardoor ook deze geplande simulatie-incidenten. Het doel is juist de bestaande pushketen te testen; er worden geen productie-Flows aangepast. De bron-app-ID is `io.github.arrow87-home.datawatchdog`, het device heet standaard **Data Watchdog Test Source (simulation)**. De simulator correleert dus niet met Plugwise of andere bron-apps.
+De bestaande incidentengine en Flow-dispatch worden volledig gebruikt. Bestaande `any_incident_started`/`any_incident_recovered`-Flows ontvangen daardoor ook deze geplande simulatie-incidenten. Het doel is juist de bestaande pushketen te testen; er worden geen productie-Flows aangepast. De bron-app-ID is `io.github.arrow87-home.datawatchdog`, het device heet standaard **Data Pulse Test Source (simulation)**. De simulator correleert dus niet met Plugwise of andere bron-apps.
 
 ## Evidence en officiële lastSeen-semantiek
 
@@ -37,8 +37,8 @@ De settings-UI is inmiddels gepolijst; zie ook [de vervolgacceptatie](ui-polish-
 ### Timestamp: volledige incident- en pushketen
 
 1. Noteer SHS-versie en branchcommit. Installeer de bijgewerkte development-app via jullie bestaande werkwijze. De testbron is optioneel en wordt niet automatisch gepaird. De gebruikelijke app-restart herstart de observatiegrace van alle monitors; doe installatie dus op een bewust gekozen moment.
-2. Homey **Devices → Add device → Data Watchdog → Data Watchdog Test Source (simulation)**. Voeg één apparaat toe. Laat de herkenbare simulatienaam staan. Een tweede pairing hoort geen extra testbron aan te bieden.
-3. Open Data Watchdog **Settings**, klik **Refresh status**. Inventarisatie haalt devices ongeveer eenmaal per minuut op; wacht indien nodig tot de testbron onder Data Watchdog verschijnt. De lokale testsectie toont `stopped`, interval 30 s, timestamp nog onbekend. Er hoort geen nieuwe heartbeat te ontstaan zolang je niets start/verstuurt.
+2. Homey **Devices → Add device → Data Pulse → Data Pulse Test Source (simulation)**. Voeg één apparaat toe. Laat de herkenbare simulatienaam staan. Een tweede pairing hoort geen extra testbron aan te bieden.
+3. Open Data Pulse **Settings**, klik **Refresh status**. Inventarisatie haalt devices ongeveer eenmaal per minuut op; wacht indien nodig tot de testbron onder Data Pulse verschijnt. De lokale testsectie toont `stopped`, interval 30 s, timestamp nog onbekend. Er hoort geen nieuwe heartbeat te ontstaan zolang je niets start/verstuurt.
 4. Maak uitsluitend op dit testdevice een enabled monitor met:
    - Freshness check: **Delivery timestamp** (`timestamp-capability`);
    - capability: **Last test heartbeat (`last_test_heartbeat`)**;

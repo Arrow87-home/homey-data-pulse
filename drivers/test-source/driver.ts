@@ -6,7 +6,7 @@ class TestSourceDriver extends Homey.Driver {
     if (this.getDevices().length) return [];
     return [
       {
-        name: 'Data Watchdog Test Source (simulation)',
+        name: this.homey.__('testSourceName'),
         data: { id: TEST_DATA_ID },
       },
     ];
