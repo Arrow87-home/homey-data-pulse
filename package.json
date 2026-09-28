@@ -1,6 +1,6 @@
 {
   "name": "homey-data-watchdog",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Data Pulse: opt-in monitoring of selected Homey sources for confirmed activity and fresh data",
   "main": "app.js",

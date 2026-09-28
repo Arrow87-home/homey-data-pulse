@@ -1,6 +1,6 @@
 # Monitorbewerking en lokale self-test
 
-Actuele handleiding voor de lokale self-test op branch `codex/watchdog-v0.1`. Settings en Flow-weergave zijn door de gebruiker op SHS gecontroleerd; het onderstaande protocol verifieert de volledige incident-/herstelketen van een concrete build. Het oorspronkelijke opleverrapport staat in [self-test-report.md](self-test-report.md).
+Actuele handleiding voor de lokale self-test op branch `codex/data-pulse-v0.1`. Settings en Flow-weergave zijn door de gebruiker op SHS gecontroleerd; het onderstaande protocol verifieert de volledige incident-/herstelketen van een concrete build. Het oorspronkelijke opleverrapport staat in [self-test-report.md](self-test-report.md).
 
 ## Wijzigingen en grenzen
 

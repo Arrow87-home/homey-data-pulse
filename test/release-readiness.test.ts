@@ -284,7 +284,16 @@ test('supported-model copy is explicit without changing manifest identity, versi
   assert.match(read('README.nl.txt'), /Homey Cloud worden niet ondersteund/);
   assert.match(read('README.md'), /Athom bevestigd/);
   assert.equal(manifest.id, 'io.github.arrow87-home.datawatchdog');
-  assert.equal(manifest.version, '0.1.1');
+  assert.equal(manifest.version, '0.1.2');
+  const pkg = JSON.parse(read('package.json'));
+  const lock = JSON.parse(read('package-lock.json'));
+  assert.equal(pkg.version, manifest.version);
+  assert.equal(lock.version, manifest.version);
+  assert.equal(lock.packages[''].version, manifest.version);
+  assert.equal(lock.name, pkg.name);
+  assert.equal(lock.packages[''].name, pkg.name);
+  assert.deepEqual(lock.packages[''].dependencies, pkg.dependencies);
+  assert.deepEqual(lock.packages[''].devDependencies, pkg.devDependencies);
   assert.equal(manifest.platformVersion, undefined);
   assert.match(read('app.ts'), /this\.homey\.platformVersion !== 2/);
 });
