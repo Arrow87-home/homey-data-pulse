@@ -116,14 +116,14 @@ IDs en configuratie blijven behouden als een apparaat tijdelijk verdwijnt. Ontbr
 
 ## Meldingen via Flow
 
-Triggers: Device became stale/recovered, Integration became stale/recovered, Any watchdog incident started/recovered. Conditions: device/integration is healthy/stale. Actions: check monitor/all now, record confirmed delivery en Start/Stop/Send test heartbeat. De monitor-check evalueert de gezamenlijke correlatie mee en omzeilt de API-ratelimiet niet.
+Triggers: **Bewaakte bron ontvangt geen updates meer**, **Bewaakte bron is hersteld**, **Integratie-incident gestart**, **Integratie-incident hersteld**, **Data Pulse-incident gestart** en **Data Pulse-incident hersteld**. Voorwaarden controleren of een bron/integratie gezond is, een bron geen updates meer ontvangt of een integratie een incident heeft dat op herstel wacht. Acties: **Controleer nu alle bewaakte bronnen**, **Controleer nu een bewaakte bron**, **Bevestig een geslaagde update**, **Start testupdates**, **Stop testupdates** en **Stuur nu een testupdate**. De monitor-check evalueert de gezamenlijke correlatie mee en omzeilt de API-ratelimiet niet.
 
 Alle triggers hebben `source_app`, `source_app_id`, `device`, `device_id`, `zone`, `capability`, `last_delivery`, `age_minutes`, `expected_interval`, `stale_timeout`, `affected_devices`, `affected_count`, `monitored_count`, `recovered_count`, `incident_duration`, `stale_since`, `status`, `incident_id`, `evidence_kind`, `has_delivery`.
 
 - Tijden zijn ISO UTC-strings; intervallen/duur-tokens zijn minuten. `affected_devices` is tekst, geen array-token.
 - Onbekende laatste levering: lege string, `has_delivery=false`, `age_minutes=-1`. Toon dan “nog geen bevestigde heartbeat ontvangen”. Integratietriggers hebben geen enkelvoudige last-delivery-tijd en tonen hun incidentstart en aantallen.
 - `evidence_kind=device-activity` betekent apparaatactiviteit; gebruik daarbij geen tekst die de versheid van alle meetwaarden claimt.
-- Gebruik óf de specifieke triggers óf de `Any`-triggers voor dezelfde melding; beide families worden aangeboden en een dubbele Flow zou twee meldingen veroorzaken.
+- Gebruik óf de specifieke triggers óf de algemene Data Pulse-incidenttriggers voor dezelfde melding; beide families worden aangeboden en een dubbele Flow zou twee meldingen veroorzaken.
 - Geen rechtstreekse push of self-healing; je bepaalt zelf welke Homey-notificatie/Advanced Flow reageert.
 
 Standaard: 15 minuten timeout in de UI + 1 minuut correlatievertraging + maximaal een schedulerstap. Twee of meer apparaten én >=80% van de geselecteerde integratie, met stale-grenzen binnen één minuut, starten één integratiestoring. Individuele storingen blijven intern zichtbaar. Eén nieuw getroffen apparaat veroorzaakt geen extra integratiemelding.

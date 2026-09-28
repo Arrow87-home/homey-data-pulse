@@ -81,147 +81,168 @@
       {
         "id": "device_stale",
         "title": {
-          "en": "Device became stale"
+          "en": "Monitored source stopped updating",
+          "nl": "Bewaakte bron ontvangt geen updates meer"
         },
         "tokens": [
           {
             "name": "source_app",
             "type": "string",
             "title": {
-              "en": "source app"
+              "en": "Source app",
+              "nl": "Bron-app"
             }
           },
           {
             "name": "source_app_id",
             "type": "string",
             "title": {
-              "en": "source app id"
+              "en": "Source app ID",
+              "nl": "Bron-app-ID"
             }
           },
           {
             "name": "device",
             "type": "string",
             "title": {
-              "en": "device"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           },
           {
             "name": "device_id",
             "type": "string",
             "title": {
-              "en": "device id"
+              "en": "Device ID",
+              "nl": "Apparaat-ID"
             }
           },
           {
             "name": "zone",
             "type": "string",
             "title": {
-              "en": "zone"
+              "en": "Zone",
+              "nl": "Zone"
             }
           },
           {
             "name": "capability",
             "type": "string",
             "title": {
-              "en": "capability"
+              "en": "Time field",
+              "nl": "Tijdveld"
             }
           },
           {
             "name": "last_delivery",
             "type": "string",
             "title": {
-              "en": "last delivery"
+              "en": "Last confirmed update",
+              "nl": "Laatste bevestigde update"
             }
           },
           {
             "name": "affected_devices",
             "type": "string",
             "title": {
-              "en": "affected devices"
+              "en": "Affected sources",
+              "nl": "Getroffen bronnen"
             }
           },
           {
             "name": "stale_since",
             "type": "string",
             "title": {
-              "en": "stale since"
+              "en": "Incident started at",
+              "nl": "Incident gestart op"
             }
           },
           {
             "name": "status",
             "type": "string",
             "title": {
-              "en": "status"
+              "en": "Status",
+              "nl": "Status"
             }
           },
           {
             "name": "incident_id",
             "type": "string",
             "title": {
-              "en": "incident id"
+              "en": "Incident ID",
+              "nl": "Incident-ID"
             }
           },
           {
             "name": "evidence_kind",
             "type": "string",
             "title": {
-              "en": "evidence kind"
+              "en": "Monitoring method",
+              "nl": "Controlemethode"
             }
           },
           {
             "name": "age_minutes",
             "type": "number",
             "title": {
-              "en": "age minutes"
+              "en": "Minutes since last update",
+              "nl": "Minuten sinds laatste update"
             }
           },
           {
             "name": "expected_interval",
             "type": "number",
             "title": {
-              "en": "expected interval"
+              "en": "Expected update interval (minutes)",
+              "nl": "Verwacht update-interval (minuten)"
             }
           },
           {
             "name": "stale_timeout",
             "type": "number",
             "title": {
-              "en": "stale timeout"
+              "en": "Alert threshold (minutes)",
+              "nl": "Meldgrens (minuten)"
             }
           },
           {
             "name": "affected_count",
             "type": "number",
             "title": {
-              "en": "affected count"
+              "en": "Affected source count",
+              "nl": "Aantal getroffen bronnen"
             }
           },
           {
             "name": "monitored_count",
             "type": "number",
             "title": {
-              "en": "monitored count"
+              "en": "Monitored source count",
+              "nl": "Aantal bewaakte bronnen"
             }
           },
           {
             "name": "recovered_count",
             "type": "number",
             "title": {
-              "en": "recovered count"
+              "en": "Recovered source count",
+              "nl": "Aantal herstelde bronnen"
             }
           },
           {
             "name": "incident_duration",
             "type": "number",
             "title": {
-              "en": "incident duration"
+              "en": "Incident duration (minutes)",
+              "nl": "Duur incident (minuten)"
             }
           },
           {
             "name": "has_delivery",
             "type": "boolean",
             "title": {
-              "en": "Known last delivery"
+              "en": "Confirmed update known",
+              "nl": "Bevestigde update bekend"
             }
           }
         ]
@@ -229,147 +250,168 @@
       {
         "id": "device_recovered",
         "title": {
-          "en": "Device recovered"
+          "en": "Monitored source recovered",
+          "nl": "Bewaakte bron is hersteld"
         },
         "tokens": [
           {
             "name": "source_app",
             "type": "string",
             "title": {
-              "en": "source app"
+              "en": "Source app",
+              "nl": "Bron-app"
             }
           },
           {
             "name": "source_app_id",
             "type": "string",
             "title": {
-              "en": "source app id"
+              "en": "Source app ID",
+              "nl": "Bron-app-ID"
             }
           },
           {
             "name": "device",
             "type": "string",
             "title": {
-              "en": "device"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           },
           {
             "name": "device_id",
             "type": "string",
             "title": {
-              "en": "device id"
+              "en": "Device ID",
+              "nl": "Apparaat-ID"
             }
           },
           {
             "name": "zone",
             "type": "string",
             "title": {
-              "en": "zone"
+              "en": "Zone",
+              "nl": "Zone"
             }
           },
           {
             "name": "capability",
             "type": "string",
             "title": {
-              "en": "capability"
+              "en": "Time field",
+              "nl": "Tijdveld"
             }
           },
           {
             "name": "last_delivery",
             "type": "string",
             "title": {
-              "en": "last delivery"
+              "en": "Last confirmed update",
+              "nl": "Laatste bevestigde update"
             }
           },
           {
             "name": "affected_devices",
             "type": "string",
             "title": {
-              "en": "affected devices"
+              "en": "Affected sources",
+              "nl": "Getroffen bronnen"
             }
           },
           {
             "name": "stale_since",
             "type": "string",
             "title": {
-              "en": "stale since"
+              "en": "Incident started at",
+              "nl": "Incident gestart op"
             }
           },
           {
             "name": "status",
             "type": "string",
             "title": {
-              "en": "status"
+              "en": "Status",
+              "nl": "Status"
             }
           },
           {
             "name": "incident_id",
             "type": "string",
             "title": {
-              "en": "incident id"
+              "en": "Incident ID",
+              "nl": "Incident-ID"
             }
           },
           {
             "name": "evidence_kind",
             "type": "string",
             "title": {
-              "en": "evidence kind"
+              "en": "Monitoring method",
+              "nl": "Controlemethode"
             }
           },
           {
             "name": "age_minutes",
             "type": "number",
             "title": {
-              "en": "age minutes"
+              "en": "Minutes since last update",
+              "nl": "Minuten sinds laatste update"
             }
           },
           {
             "name": "expected_interval",
             "type": "number",
             "title": {
-              "en": "expected interval"
+              "en": "Expected update interval (minutes)",
+              "nl": "Verwacht update-interval (minuten)"
             }
           },
           {
             "name": "stale_timeout",
             "type": "number",
             "title": {
-              "en": "stale timeout"
+              "en": "Alert threshold (minutes)",
+              "nl": "Meldgrens (minuten)"
             }
           },
           {
             "name": "affected_count",
             "type": "number",
             "title": {
-              "en": "affected count"
+              "en": "Affected source count",
+              "nl": "Aantal getroffen bronnen"
             }
           },
           {
             "name": "monitored_count",
             "type": "number",
             "title": {
-              "en": "monitored count"
+              "en": "Monitored source count",
+              "nl": "Aantal bewaakte bronnen"
             }
           },
           {
             "name": "recovered_count",
             "type": "number",
             "title": {
-              "en": "recovered count"
+              "en": "Recovered source count",
+              "nl": "Aantal herstelde bronnen"
             }
           },
           {
             "name": "incident_duration",
             "type": "number",
             "title": {
-              "en": "incident duration"
+              "en": "Incident duration (minutes)",
+              "nl": "Duur incident (minuten)"
             }
           },
           {
             "name": "has_delivery",
             "type": "boolean",
             "title": {
-              "en": "Known last delivery"
+              "en": "Confirmed update known",
+              "nl": "Bevestigde update bekend"
             }
           }
         ]
@@ -377,147 +419,168 @@
       {
         "id": "integration_stale",
         "title": {
-          "en": "Integration became stale"
+          "en": "Integration incident started",
+          "nl": "Integratie-incident gestart"
         },
         "tokens": [
           {
             "name": "source_app",
             "type": "string",
             "title": {
-              "en": "source app"
+              "en": "Source app",
+              "nl": "Bron-app"
             }
           },
           {
             "name": "source_app_id",
             "type": "string",
             "title": {
-              "en": "source app id"
+              "en": "Source app ID",
+              "nl": "Bron-app-ID"
             }
           },
           {
             "name": "device",
             "type": "string",
             "title": {
-              "en": "device"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           },
           {
             "name": "device_id",
             "type": "string",
             "title": {
-              "en": "device id"
+              "en": "Device ID",
+              "nl": "Apparaat-ID"
             }
           },
           {
             "name": "zone",
             "type": "string",
             "title": {
-              "en": "zone"
+              "en": "Zone",
+              "nl": "Zone"
             }
           },
           {
             "name": "capability",
             "type": "string",
             "title": {
-              "en": "capability"
+              "en": "Time field",
+              "nl": "Tijdveld"
             }
           },
           {
             "name": "last_delivery",
             "type": "string",
             "title": {
-              "en": "last delivery"
+              "en": "Last confirmed update",
+              "nl": "Laatste bevestigde update"
             }
           },
           {
             "name": "affected_devices",
             "type": "string",
             "title": {
-              "en": "affected devices"
+              "en": "Affected sources",
+              "nl": "Getroffen bronnen"
             }
           },
           {
             "name": "stale_since",
             "type": "string",
             "title": {
-              "en": "stale since"
+              "en": "Incident started at",
+              "nl": "Incident gestart op"
             }
           },
           {
             "name": "status",
             "type": "string",
             "title": {
-              "en": "status"
+              "en": "Status",
+              "nl": "Status"
             }
           },
           {
             "name": "incident_id",
             "type": "string",
             "title": {
-              "en": "incident id"
+              "en": "Incident ID",
+              "nl": "Incident-ID"
             }
           },
           {
             "name": "evidence_kind",
             "type": "string",
             "title": {
-              "en": "evidence kind"
+              "en": "Monitoring method",
+              "nl": "Controlemethode"
             }
           },
           {
             "name": "age_minutes",
             "type": "number",
             "title": {
-              "en": "age minutes"
+              "en": "Minutes since last update",
+              "nl": "Minuten sinds laatste update"
             }
           },
           {
             "name": "expected_interval",
             "type": "number",
             "title": {
-              "en": "expected interval"
+              "en": "Expected update interval (minutes)",
+              "nl": "Verwacht update-interval (minuten)"
             }
           },
           {
             "name": "stale_timeout",
             "type": "number",
             "title": {
-              "en": "stale timeout"
+              "en": "Alert threshold (minutes)",
+              "nl": "Meldgrens (minuten)"
             }
           },
           {
             "name": "affected_count",
             "type": "number",
             "title": {
-              "en": "affected count"
+              "en": "Affected source count",
+              "nl": "Aantal getroffen bronnen"
             }
           },
           {
             "name": "monitored_count",
             "type": "number",
             "title": {
-              "en": "monitored count"
+              "en": "Monitored source count",
+              "nl": "Aantal bewaakte bronnen"
             }
           },
           {
             "name": "recovered_count",
             "type": "number",
             "title": {
-              "en": "recovered count"
+              "en": "Recovered source count",
+              "nl": "Aantal herstelde bronnen"
             }
           },
           {
             "name": "incident_duration",
             "type": "number",
             "title": {
-              "en": "incident duration"
+              "en": "Incident duration (minutes)",
+              "nl": "Duur incident (minuten)"
             }
           },
           {
             "name": "has_delivery",
             "type": "boolean",
             "title": {
-              "en": "Known last delivery"
+              "en": "Confirmed update known",
+              "nl": "Bevestigde update bekend"
             }
           }
         ]
@@ -525,147 +588,168 @@
       {
         "id": "integration_recovered",
         "title": {
-          "en": "Integration recovered"
+          "en": "Integration incident recovered",
+          "nl": "Integratie-incident hersteld"
         },
         "tokens": [
           {
             "name": "source_app",
             "type": "string",
             "title": {
-              "en": "source app"
+              "en": "Source app",
+              "nl": "Bron-app"
             }
           },
           {
             "name": "source_app_id",
             "type": "string",
             "title": {
-              "en": "source app id"
+              "en": "Source app ID",
+              "nl": "Bron-app-ID"
             }
           },
           {
             "name": "device",
             "type": "string",
             "title": {
-              "en": "device"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           },
           {
             "name": "device_id",
             "type": "string",
             "title": {
-              "en": "device id"
+              "en": "Device ID",
+              "nl": "Apparaat-ID"
             }
           },
           {
             "name": "zone",
             "type": "string",
             "title": {
-              "en": "zone"
+              "en": "Zone",
+              "nl": "Zone"
             }
           },
           {
             "name": "capability",
             "type": "string",
             "title": {
-              "en": "capability"
+              "en": "Time field",
+              "nl": "Tijdveld"
             }
           },
           {
             "name": "last_delivery",
             "type": "string",
             "title": {
-              "en": "last delivery"
+              "en": "Last confirmed update",
+              "nl": "Laatste bevestigde update"
             }
           },
           {
             "name": "affected_devices",
             "type": "string",
             "title": {
-              "en": "affected devices"
+              "en": "Affected sources",
+              "nl": "Getroffen bronnen"
             }
           },
           {
             "name": "stale_since",
             "type": "string",
             "title": {
-              "en": "stale since"
+              "en": "Incident started at",
+              "nl": "Incident gestart op"
             }
           },
           {
             "name": "status",
             "type": "string",
             "title": {
-              "en": "status"
+              "en": "Status",
+              "nl": "Status"
             }
           },
           {
             "name": "incident_id",
             "type": "string",
             "title": {
-              "en": "incident id"
+              "en": "Incident ID",
+              "nl": "Incident-ID"
             }
           },
           {
             "name": "evidence_kind",
             "type": "string",
             "title": {
-              "en": "evidence kind"
+              "en": "Monitoring method",
+              "nl": "Controlemethode"
             }
           },
           {
             "name": "age_minutes",
             "type": "number",
             "title": {
-              "en": "age minutes"
+              "en": "Minutes since last update",
+              "nl": "Minuten sinds laatste update"
             }
           },
           {
             "name": "expected_interval",
             "type": "number",
             "title": {
-              "en": "expected interval"
+              "en": "Expected update interval (minutes)",
+              "nl": "Verwacht update-interval (minuten)"
             }
           },
           {
             "name": "stale_timeout",
             "type": "number",
             "title": {
-              "en": "stale timeout"
+              "en": "Alert threshold (minutes)",
+              "nl": "Meldgrens (minuten)"
             }
           },
           {
             "name": "affected_count",
             "type": "number",
             "title": {
-              "en": "affected count"
+              "en": "Affected source count",
+              "nl": "Aantal getroffen bronnen"
             }
           },
           {
             "name": "monitored_count",
             "type": "number",
             "title": {
-              "en": "monitored count"
+              "en": "Monitored source count",
+              "nl": "Aantal bewaakte bronnen"
             }
           },
           {
             "name": "recovered_count",
             "type": "number",
             "title": {
-              "en": "recovered count"
+              "en": "Recovered source count",
+              "nl": "Aantal herstelde bronnen"
             }
           },
           {
             "name": "incident_duration",
             "type": "number",
             "title": {
-              "en": "incident duration"
+              "en": "Incident duration (minutes)",
+              "nl": "Duur incident (minuten)"
             }
           },
           {
             "name": "has_delivery",
             "type": "boolean",
             "title": {
-              "en": "Known last delivery"
+              "en": "Confirmed update known",
+              "nl": "Bevestigde update bekend"
             }
           }
         ]
@@ -673,147 +757,168 @@
       {
         "id": "any_incident_started",
         "title": {
-          "en": "Any watchdog incident started"
+          "en": "Data Pulse incident started",
+          "nl": "Data Pulse-incident gestart"
         },
         "tokens": [
           {
             "name": "source_app",
             "type": "string",
             "title": {
-              "en": "source app"
+              "en": "Source app",
+              "nl": "Bron-app"
             }
           },
           {
             "name": "source_app_id",
             "type": "string",
             "title": {
-              "en": "source app id"
+              "en": "Source app ID",
+              "nl": "Bron-app-ID"
             }
           },
           {
             "name": "device",
             "type": "string",
             "title": {
-              "en": "device"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           },
           {
             "name": "device_id",
             "type": "string",
             "title": {
-              "en": "device id"
+              "en": "Device ID",
+              "nl": "Apparaat-ID"
             }
           },
           {
             "name": "zone",
             "type": "string",
             "title": {
-              "en": "zone"
+              "en": "Zone",
+              "nl": "Zone"
             }
           },
           {
             "name": "capability",
             "type": "string",
             "title": {
-              "en": "capability"
+              "en": "Time field",
+              "nl": "Tijdveld"
             }
           },
           {
             "name": "last_delivery",
             "type": "string",
             "title": {
-              "en": "last delivery"
+              "en": "Last confirmed update",
+              "nl": "Laatste bevestigde update"
             }
           },
           {
             "name": "affected_devices",
             "type": "string",
             "title": {
-              "en": "affected devices"
+              "en": "Affected sources",
+              "nl": "Getroffen bronnen"
             }
           },
           {
             "name": "stale_since",
             "type": "string",
             "title": {
-              "en": "stale since"
+              "en": "Incident started at",
+              "nl": "Incident gestart op"
             }
           },
           {
             "name": "status",
             "type": "string",
             "title": {
-              "en": "status"
+              "en": "Status",
+              "nl": "Status"
             }
           },
           {
             "name": "incident_id",
             "type": "string",
             "title": {
-              "en": "incident id"
+              "en": "Incident ID",
+              "nl": "Incident-ID"
             }
           },
           {
             "name": "evidence_kind",
             "type": "string",
             "title": {
-              "en": "evidence kind"
+              "en": "Monitoring method",
+              "nl": "Controlemethode"
             }
           },
           {
             "name": "age_minutes",
             "type": "number",
             "title": {
-              "en": "age minutes"
+              "en": "Minutes since last update",
+              "nl": "Minuten sinds laatste update"
             }
           },
           {
             "name": "expected_interval",
             "type": "number",
             "title": {
-              "en": "expected interval"
+              "en": "Expected update interval (minutes)",
+              "nl": "Verwacht update-interval (minuten)"
             }
           },
           {
             "name": "stale_timeout",
             "type": "number",
             "title": {
-              "en": "stale timeout"
+              "en": "Alert threshold (minutes)",
+              "nl": "Meldgrens (minuten)"
             }
           },
           {
             "name": "affected_count",
             "type": "number",
             "title": {
-              "en": "affected count"
+              "en": "Affected source count",
+              "nl": "Aantal getroffen bronnen"
             }
           },
           {
             "name": "monitored_count",
             "type": "number",
             "title": {
-              "en": "monitored count"
+              "en": "Monitored source count",
+              "nl": "Aantal bewaakte bronnen"
             }
           },
           {
             "name": "recovered_count",
             "type": "number",
             "title": {
-              "en": "recovered count"
+              "en": "Recovered source count",
+              "nl": "Aantal herstelde bronnen"
             }
           },
           {
             "name": "incident_duration",
             "type": "number",
             "title": {
-              "en": "incident duration"
+              "en": "Incident duration (minutes)",
+              "nl": "Duur incident (minuten)"
             }
           },
           {
             "name": "has_delivery",
             "type": "boolean",
             "title": {
-              "en": "Known last delivery"
+              "en": "Confirmed update known",
+              "nl": "Bevestigde update bekend"
             }
           }
         ]
@@ -821,147 +926,168 @@
       {
         "id": "any_incident_recovered",
         "title": {
-          "en": "Any watchdog incident recovered"
+          "en": "Data Pulse incident recovered",
+          "nl": "Data Pulse-incident hersteld"
         },
         "tokens": [
           {
             "name": "source_app",
             "type": "string",
             "title": {
-              "en": "source app"
+              "en": "Source app",
+              "nl": "Bron-app"
             }
           },
           {
             "name": "source_app_id",
             "type": "string",
             "title": {
-              "en": "source app id"
+              "en": "Source app ID",
+              "nl": "Bron-app-ID"
             }
           },
           {
             "name": "device",
             "type": "string",
             "title": {
-              "en": "device"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           },
           {
             "name": "device_id",
             "type": "string",
             "title": {
-              "en": "device id"
+              "en": "Device ID",
+              "nl": "Apparaat-ID"
             }
           },
           {
             "name": "zone",
             "type": "string",
             "title": {
-              "en": "zone"
+              "en": "Zone",
+              "nl": "Zone"
             }
           },
           {
             "name": "capability",
             "type": "string",
             "title": {
-              "en": "capability"
+              "en": "Time field",
+              "nl": "Tijdveld"
             }
           },
           {
             "name": "last_delivery",
             "type": "string",
             "title": {
-              "en": "last delivery"
+              "en": "Last confirmed update",
+              "nl": "Laatste bevestigde update"
             }
           },
           {
             "name": "affected_devices",
             "type": "string",
             "title": {
-              "en": "affected devices"
+              "en": "Affected sources",
+              "nl": "Getroffen bronnen"
             }
           },
           {
             "name": "stale_since",
             "type": "string",
             "title": {
-              "en": "stale since"
+              "en": "Incident started at",
+              "nl": "Incident gestart op"
             }
           },
           {
             "name": "status",
             "type": "string",
             "title": {
-              "en": "status"
+              "en": "Status",
+              "nl": "Status"
             }
           },
           {
             "name": "incident_id",
             "type": "string",
             "title": {
-              "en": "incident id"
+              "en": "Incident ID",
+              "nl": "Incident-ID"
             }
           },
           {
             "name": "evidence_kind",
             "type": "string",
             "title": {
-              "en": "evidence kind"
+              "en": "Monitoring method",
+              "nl": "Controlemethode"
             }
           },
           {
             "name": "age_minutes",
             "type": "number",
             "title": {
-              "en": "age minutes"
+              "en": "Minutes since last update",
+              "nl": "Minuten sinds laatste update"
             }
           },
           {
             "name": "expected_interval",
             "type": "number",
             "title": {
-              "en": "expected interval"
+              "en": "Expected update interval (minutes)",
+              "nl": "Verwacht update-interval (minuten)"
             }
           },
           {
             "name": "stale_timeout",
             "type": "number",
             "title": {
-              "en": "stale timeout"
+              "en": "Alert threshold (minutes)",
+              "nl": "Meldgrens (minuten)"
             }
           },
           {
             "name": "affected_count",
             "type": "number",
             "title": {
-              "en": "affected count"
+              "en": "Affected source count",
+              "nl": "Aantal getroffen bronnen"
             }
           },
           {
             "name": "monitored_count",
             "type": "number",
             "title": {
-              "en": "monitored count"
+              "en": "Monitored source count",
+              "nl": "Aantal bewaakte bronnen"
             }
           },
           {
             "name": "recovered_count",
             "type": "number",
             "title": {
-              "en": "recovered count"
+              "en": "Recovered source count",
+              "nl": "Aantal herstelde bronnen"
             }
           },
           {
             "name": "incident_duration",
             "type": "number",
             "title": {
-              "en": "incident duration"
+              "en": "Incident duration (minutes)",
+              "nl": "Duur incident (minuten)"
             }
           },
           {
             "name": "has_delivery",
             "type": "boolean",
             "title": {
-              "en": "Known last delivery"
+              "en": "Confirmed update known",
+              "nl": "Bevestigde update bekend"
             }
           }
         ]
@@ -971,17 +1097,20 @@
       {
         "id": "device_is_healthy",
         "titleFormatted": {
-          "en": "[[monitor]] is healthy"
+          "en": "[[monitor]] is healthy",
+          "nl": "[[monitor]] is gezond"
         },
         "title": {
-          "en": "Device is healthy"
+          "en": "Monitored source is healthy",
+          "nl": "Bewaakte bron is gezond"
         },
         "args": [
           {
             "name": "monitor",
             "type": "autocomplete",
             "title": {
-              "en": "monitor"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           }
         ]
@@ -989,17 +1118,20 @@
       {
         "id": "device_is_stale",
         "titleFormatted": {
-          "en": "[[monitor]] is stale"
+          "en": "[[monitor]] has stopped updating",
+          "nl": "[[monitor]] ontvangt geen updates meer"
         },
         "title": {
-          "en": "Device is stale"
+          "en": "Monitored source has stopped updating",
+          "nl": "Bewaakte bron ontvangt geen updates meer"
         },
         "args": [
           {
             "name": "monitor",
             "type": "autocomplete",
             "title": {
-              "en": "monitor"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           }
         ]
@@ -1007,17 +1139,20 @@
       {
         "id": "integration_is_healthy",
         "titleFormatted": {
-          "en": "[[source]] is healthy"
+          "en": "[[source]] is healthy",
+          "nl": "[[source]] is gezond"
         },
         "title": {
-          "en": "Integration is healthy"
+          "en": "Integration is healthy",
+          "nl": "Integratie is gezond"
         },
         "args": [
           {
             "name": "source",
             "type": "autocomplete",
             "title": {
-              "en": "source"
+              "en": "Integration",
+              "nl": "Integratie"
             }
           }
         ]
@@ -1025,17 +1160,20 @@
       {
         "id": "integration_is_stale",
         "titleFormatted": {
-          "en": "[[source]] is stale"
+          "en": "[[source]] has an incident awaiting recovery",
+          "nl": "[[source]] heeft een incident dat op herstel wacht"
         },
         "title": {
-          "en": "Integration is stale"
+          "en": "Integration has an incident awaiting recovery",
+          "nl": "Integratie heeft een incident dat op herstel wacht"
         },
         "args": [
           {
             "name": "source",
             "type": "autocomplete",
             "title": {
-              "en": "source"
+              "en": "Integration",
+              "nl": "Integratie"
             }
           }
         ]
@@ -1045,7 +1183,8 @@
       {
         "id": "start_test_heartbeat",
         "title": {
-          "en": "Start test heartbeat"
+          "en": "Start test updates",
+          "nl": "Start testupdates"
         },
         "hint": {
           "en": "Local Data Pulse simulation only. Requires the optional test source device.",
@@ -1055,7 +1194,8 @@
       {
         "id": "stop_test_heartbeat",
         "title": {
-          "en": "Stop test heartbeat"
+          "en": "Stop test updates",
+          "nl": "Stop testupdates"
         },
         "hint": {
           "en": "Local Data Pulse simulation only. Requires the optional test source device.",
@@ -1065,7 +1205,8 @@
       {
         "id": "send_test_heartbeat",
         "title": {
-          "en": "Send test heartbeat now"
+          "en": "Send a test update now",
+          "nl": "Stuur nu een testupdate"
         },
         "hint": {
           "en": "Local Data Pulse simulation only. Requires the optional test source device.",
@@ -1075,23 +1216,27 @@
       {
         "id": "check_all",
         "title": {
-          "en": "Check all monitors now"
+          "en": "Check all monitored sources now",
+          "nl": "Controleer nu alle bewaakte bronnen"
         }
       },
       {
         "id": "check_monitor",
         "titleFormatted": {
-          "en": "Check [[monitor]] now"
+          "en": "Check [[monitor]] now",
+          "nl": "Controleer [[monitor]] nu"
         },
         "title": {
-          "en": "Check monitor now"
+          "en": "Check a monitored source now",
+          "nl": "Controleer nu een bewaakte bron"
         },
         "args": [
           {
             "name": "monitor",
             "type": "autocomplete",
             "title": {
-              "en": "monitor"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           }
         ]
@@ -1099,27 +1244,32 @@
       {
         "id": "record_heartbeat",
         "titleFormatted": {
-          "en": "Record delivery for [[monitor]] at [[delivered_at]]"
+          "en": "Confirm a successful update for [[monitor]] at [[delivered_at]]",
+          "nl": "Bevestig een geslaagde update voor [[monitor]] op [[delivered_at]]"
         },
         "title": {
-          "en": "Record a confirmed delivery"
+          "en": "Confirm a successful update",
+          "nl": "Bevestig een geslaagde update"
         },
         "hint": {
-          "en": "Only call after a successful source delivery. Supply its ISO timestamp, never a blind periodic timer."
+          "en": "Use only after a successful update. Enter the actual update time as an ISO date and time with timezone. Never confirm using only a periodic timer.",
+          "nl": "Gebruik dit alleen na een geslaagde update. Vul het werkelijke tijdstip in als ISO-datum en -tijd met tijdzone. Bevestig nooit alleen op basis van een periodieke timer."
         },
         "args": [
           {
             "name": "monitor",
             "type": "autocomplete",
             "title": {
-              "en": "monitor"
+              "en": "Monitored source",
+              "nl": "Bewaakte bron"
             }
           },
           {
             "name": "delivered_at",
             "type": "text",
             "title": {
-              "en": "Delivery timestamp (ISO with timezone)"
+              "en": "Update time (ISO with timezone)",
+              "nl": "Tijdstip update (ISO met tijdzone)"
             }
           }
         ]

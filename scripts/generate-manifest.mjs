@@ -1,4 +1,50 @@
 import fs from 'node:fs';
+const tokenTitles = {
+  source_app: { en: 'Source app', nl: 'Bron-app' },
+  source_app_id: { en: 'Source app ID', nl: 'Bron-app-ID' },
+  device: { en: 'Monitored source', nl: 'Bewaakte bron' },
+  device_id: { en: 'Device ID', nl: 'Apparaat-ID' },
+  zone: { en: 'Zone', nl: 'Zone' },
+  capability: { en: 'Time field', nl: 'Tijdveld' },
+  last_delivery: {
+    en: 'Last confirmed update',
+    nl: 'Laatste bevestigde update',
+  },
+  affected_devices: { en: 'Affected sources', nl: 'Getroffen bronnen' },
+  stale_since: { en: 'Incident started at', nl: 'Incident gestart op' },
+  status: { en: 'Status', nl: 'Status' },
+  incident_id: { en: 'Incident ID', nl: 'Incident-ID' },
+  evidence_kind: { en: 'Monitoring method', nl: 'Controlemethode' },
+  age_minutes: {
+    en: 'Minutes since last update',
+    nl: 'Minuten sinds laatste update',
+  },
+  expected_interval: {
+    en: 'Expected update interval (minutes)',
+    nl: 'Verwacht update-interval (minuten)',
+  },
+  stale_timeout: { en: 'Alert threshold (minutes)', nl: 'Meldgrens (minuten)' },
+  affected_count: {
+    en: 'Affected source count',
+    nl: 'Aantal getroffen bronnen',
+  },
+  monitored_count: {
+    en: 'Monitored source count',
+    nl: 'Aantal bewaakte bronnen',
+  },
+  recovered_count: {
+    en: 'Recovered source count',
+    nl: 'Aantal herstelde bronnen',
+  },
+  incident_duration: {
+    en: 'Incident duration (minutes)',
+    nl: 'Duur incident (minuten)',
+  },
+  has_delivery: {
+    en: 'Confirmed update known',
+    nl: 'Bevestigde update bekend',
+  },
+};
 const strings = [
   'source_app',
   'source_app_id',
@@ -26,23 +72,26 @@ const tokens = [
   ...strings.map((name) => ({
     name,
     type: 'string',
-    title: { en: name.replaceAll('_', ' ') },
+    title: tokenTitles[name],
   })),
   ...numbers.map((name) => ({
     name,
     type: 'number',
-    title: { en: name.replaceAll('_', ' ') },
+    title: tokenTitles[name],
   })),
   {
     name: 'has_delivery',
     type: 'boolean',
-    title: { en: 'Known last delivery' },
+    title: tokenTitles.has_delivery,
   },
 ];
 const argument = (name) => ({
   name,
   type: 'autocomplete',
-  title: { en: name },
+  title:
+    name === 'monitor'
+      ? { en: 'Monitored source', nl: 'Bewaakte bron' }
+      : { en: 'Integration', nl: 'Integratie' },
 });
 const manifest = {
   id: 'io.github.arrow87-home.datawatchdog',
@@ -106,60 +155,106 @@ const manifest = {
   ],
   flow: {
     triggers: [
-      ['device_stale', 'Device became stale'],
-      ['device_recovered', 'Device recovered'],
-      ['integration_stale', 'Integration became stale'],
-      ['integration_recovered', 'Integration recovered'],
-      ['any_incident_started', 'Any watchdog incident started'],
-      ['any_incident_recovered', 'Any watchdog incident recovered'],
-    ].map(([id, title]) => ({ id, title: { en: title }, tokens })),
+      [
+        'device_stale',
+        'Monitored source stopped updating',
+        'Bewaakte bron ontvangt geen updates meer',
+      ],
+      [
+        'device_recovered',
+        'Monitored source recovered',
+        'Bewaakte bron is hersteld',
+      ],
+      [
+        'integration_stale',
+        'Integration incident started',
+        'Integratie-incident gestart',
+      ],
+      [
+        'integration_recovered',
+        'Integration incident recovered',
+        'Integratie-incident hersteld',
+      ],
+      [
+        'any_incident_started',
+        'Data Pulse incident started',
+        'Data Pulse-incident gestart',
+      ],
+      [
+        'any_incident_recovered',
+        'Data Pulse incident recovered',
+        'Data Pulse-incident hersteld',
+      ],
+    ].map(([id, en, nl]) => ({ id, title: { en, nl }, tokens })),
     conditions: ['device', 'integration'].flatMap((scope) =>
       ['healthy', 'stale'].map((state) => ({
         id: `${scope}_is_${state}`,
         titleFormatted: {
-          en: `[[${scope === 'device' ? 'monitor' : 'source'}]] is ${state}`,
+          en: `[[${scope === 'device' ? 'monitor' : 'source'}]] ${state === 'healthy' ? 'is healthy' : scope === 'device' ? 'has stopped updating' : 'has an incident awaiting recovery'}`,
+          nl: `[[${scope === 'device' ? 'monitor' : 'source'}]] ${state === 'healthy' ? 'is gezond' : scope === 'device' ? 'ontvangt geen updates meer' : 'heeft een incident dat op herstel wacht'}`,
         },
         title: {
-          en: `${scope === 'device' ? 'Device' : 'Integration'} is ${state}`,
+          en: `${scope === 'device' ? 'Monitored source' : 'Integration'} ${state === 'healthy' ? 'is healthy' : scope === 'device' ? 'has stopped updating' : 'has an incident awaiting recovery'}`,
+          nl: `${scope === 'device' ? 'Bewaakte bron' : 'Integratie'} ${state === 'healthy' ? 'is gezond' : scope === 'device' ? 'ontvangt geen updates meer' : 'heeft een incident dat op herstel wacht'}`,
         },
         args: [argument(scope === 'device' ? 'monitor' : 'source')],
       })),
     ),
     actions: [
       ...[
-        ['start', 'Start test heartbeat'],
-        ['stop', 'Stop test heartbeat'],
-        ['send', 'Send test heartbeat now'],
-      ].map(([action, title]) => ({
+        ['start', 'Start test updates', 'Start testupdates'],
+        ['stop', 'Stop test updates', 'Stop testupdates'],
+        ['send', 'Send a test update now', 'Stuur nu een testupdate'],
+      ].map(([action, en, nl]) => ({
         id: `${action}_test_heartbeat`,
-        title: { en: title },
+        title: { en, nl },
         hint: {
           en: 'Local Data Pulse simulation only. Requires the optional test source device.',
           nl: 'Alleen een lokale Data Pulse-simulatie. Vereist het optionele testbronapparaat.',
         },
       })),
-      { id: 'check_all', title: { en: 'Check all monitors now' } },
+      {
+        id: 'check_all',
+        title: {
+          en: 'Check all monitored sources now',
+          nl: 'Controleer nu alle bewaakte bronnen',
+        },
+      },
       {
         id: 'check_monitor',
-        titleFormatted: { en: 'Check [[monitor]] now' },
-        title: { en: 'Check monitor now' },
+        titleFormatted: {
+          en: 'Check [[monitor]] now',
+          nl: 'Controleer [[monitor]] nu',
+        },
+        title: {
+          en: 'Check a monitored source now',
+          nl: 'Controleer nu een bewaakte bron',
+        },
         args: [argument('monitor')],
       },
       {
         id: 'record_heartbeat',
         titleFormatted: {
-          en: 'Record delivery for [[monitor]] at [[delivered_at]]',
+          en: 'Confirm a successful update for [[monitor]] at [[delivered_at]]',
+          nl: 'Bevestig een geslaagde update voor [[monitor]] op [[delivered_at]]',
         },
-        title: { en: 'Record a confirmed delivery' },
+        title: {
+          en: 'Confirm a successful update',
+          nl: 'Bevestig een geslaagde update',
+        },
         hint: {
-          en: 'Only call after a successful source delivery. Supply its ISO timestamp, never a blind periodic timer.',
+          en: 'Use only after a successful update. Enter the actual update time as an ISO date and time with timezone. Never confirm using only a periodic timer.',
+          nl: 'Gebruik dit alleen na een geslaagde update. Vul het werkelijke tijdstip in als ISO-datum en -tijd met tijdzone. Bevestig nooit alleen op basis van een periodieke timer.',
         },
         args: [
           argument('monitor'),
           {
             name: 'delivered_at',
             type: 'text',
-            title: { en: 'Delivery timestamp (ISO with timezone)' },
+            title: {
+              en: 'Update time (ISO with timezone)',
+              nl: 'Tijdstip update (ISO met tijdzone)',
+            },
           },
         ],
       },

@@ -22,7 +22,7 @@ You choose which devices to monitor. New devices are not monitored automatically
 6. Leave **Monitor enabled** checked. **Technical note** under **Advanced (optional)** can stay empty.
 7. Select **Add monitor**. If something needs correction, the relevant field is highlighted and a message appears beside the save action.
 8. Use **Refresh status** to see current monitoring information. A new monitor normally begins at WARMING_UP and needs a fresh update before becoming HEALTHY.
-9. For phone notifications, create a Flow using **Any watchdog incident started**, as described in [Getting notifications](#getting-notifications).
+9. For phone notifications, create a Flow using **Data Pulse incident started**, as described in [Getting notifications](#getting-notifications).
 
 There can be one monitor per device. If a monitor already exists, use **Edit** on its card.
 
@@ -58,7 +58,7 @@ For the optional local test device, choose **Last test heartbeat** (`last_test_h
 
 Use this when a Flow, integration or API can explicitly confirm that a delivery succeeded. A heartbeat is simply that confirmation.
 
-For example, an integration might run a successful synchronization and then notify Data Pulse. In a Flow, the Data Pulse action **Record a confirmed delivery** takes the chosen monitor and the actual delivery timestamp in ISO format with timezone. The integration or Flow must supply that information from the successful delivery.
+For example, an integration might run a successful synchronization and then notify Data Pulse. In a Flow, the Data Pulse action **Confirm a successful update** takes the chosen monitor and the actual delivery timestamp in ISO format with timezone. The integration or Flow must supply that information from the successful delivery.
 
 Selecting this method does not create a heartbeat sender. If your source cannot provide a success signal and its delivery time, another method may be more suitable. API setup is an option for integration developers; ordinary users do not need to write API calls to use the other methods.
 
@@ -104,7 +104,7 @@ For sources that only report when something happens, a quiet period may be norma
 
 The card's **Last delivery** shows the most recently accepted signal. With Device activity, it represents accepted activity, not necessarily a new measurement. **Technical details** contains the exact time and identifiers if you need support.
 
-**Observation status** describes Data Pulse's ability to observe Homey. **Connected** does not mean every monitored device is healthy. **Dispatch failures** counts failed attempts to send watchdog events to Flows; zero is not proof that a push arrived on your phone. Full troubleshooting information is available under **Diagnostics**.
+**Observation status** describes Data Pulse's ability to observe Homey. **Connected** does not mean every monitored device is healthy. **Dispatch failures** counts failed attempts to send Data Pulse events to Flows; zero is not proof that a push arrived on your phone. Full troubleshooting information is available under **Diagnostics**.
 
 ## Getting notifications
 
@@ -114,16 +114,16 @@ Create a Flow such as:
 
 | Flow part | Choose                                                                      |
 | --------- | --------------------------------------------------------------------------- |
-| **WHEN**  | Data Pulse → **Any watchdog incident started**                              |
+| **WHEN**  | Data Pulse → **Data Pulse incident started**                                |
 | **THEN**  | Homey's **Send a push notification** action; choose a recipient and message |
 
 An example message is “Data Pulse: a source has stopped reporting.” Use the integration/device information supplied by the trigger to make the message more useful. Exact Homey action wording may vary with your language and app version.
 
-For recovery notifications, create a separate Flow with **Any watchdog incident recovered**, for example “Data Pulse: reporting has recovered.”
+For recovery notifications, create a separate Flow with **Data Pulse incident recovered**, for example “Data Pulse: reporting has recovered.”
 
-You can add your own Flow conditions to limit which incidents are reported. Avoid sending the same notification from both an **Any watchdog incident** trigger and a device- or integration-specific trigger, unless you deliberately want both.
+You can add your own Flow conditions to limit which incidents are reported. Avoid sending the same notification from both an **Data Pulse incident** trigger and a device- or integration-specific trigger, unless you deliberately want both.
 
-If several monitored devices from the same integration stop reporting together, Data Pulse can treat them as one integration incident. The general **Any watchdog incident** cards cover both individual and grouped incidents, which helps avoid a burst of separate messages for one shared problem.
+If several monitored devices from the same integration stop reporting together, Data Pulse can treat them as one integration incident. The general **Data Pulse incident** cards cover both individual and grouped incidents, which helps avoid a burst of separate messages for one shared problem.
 
 ## Editing and disabling monitors
 
@@ -207,7 +207,7 @@ Choosing this method does not automatically send confirmations. Check that the F
 
 Detection and notification are separate. Check that:
 
-1. A Flow uses **Any watchdog incident started** and has a push-notification action.
+1. A Flow uses **Data Pulse incident started** and has a push-notification action.
 2. The Flow is enabled and its conditions allow this incident, including simulator incidents if you are testing.
 3. The intended person is the recipient, Homey notifications are allowed on their phone, and notification settings such as Focus mode are not hiding the message.
 4. **Observation status** does not show a dispatch failure.
@@ -218,7 +218,7 @@ A newly configured Flow does not replay an old incident start. To test the whole
 
 First check for overlapping Flows: using both a general incident trigger and a device-specific trigger for the same push can create duplicate notifications. Also check whether the source genuinely recovers and then stops reporting again, which can produce a new incident.
 
-A single device problem can be reported individually. When several monitors from the same integration stop reporting together, Data Pulse can group them into one integration incident. Individual device statuses can still show a problem while the shared incident is active. The **Any watchdog incident** triggers are the simplest starting point for general notifications.
+A single device problem can be reported individually. When several monitors from the same integration stop reporting together, Data Pulse can group them into one integration incident. Individual device statuses can still show a problem while the shared incident is active. The **Data Pulse incident** triggers are the simplest starting point for general notifications.
 
 ### Add monitor or Save changes does not succeed
 

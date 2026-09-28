@@ -1261,8 +1261,12 @@ test('built-in Help stays collapsed and retains every localized topic without st
       .map(([, value]) => value)
       .join(' ');
     for (const phrase of [
-      'Any watchdog incident started',
-      'Any watchdog incident recovered',
+      language === 'nl'
+        ? 'Data Pulse-incident gestart'
+        : 'Data Pulse incident started',
+      language === 'nl'
+        ? 'Data Pulse-incident hersteld'
+        : 'Data Pulse incident recovered',
       'Homey',
       'Data Pulse',
       language === 'nl' ? '21,3 °C' : '21.3 °C',
@@ -1301,7 +1305,7 @@ test('standalone user guide is linked from README and covers setup, notification
     readFileSync('README.md', 'utf8'),
     /\[User Guide\]\(docs\/user-guide\.md\)/,
   );
-  assert.match(guide, /Any watchdog incident recovered/);
+  assert.match(guide, /Data Pulse incident recovered/);
   assert.match(guide, /cannot report a complete outage/);
 });
 
