@@ -83,4 +83,6 @@ Data Pulse is actively developed and available through the Homey Test channel. F
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
+The Data Pulse software is licensed under GPL-3.0-only. See [LICENSE](LICENSE).
+
+No rights to use the Data Pulse name, logo, icon or visual branding as trademarks or product branding are granted by the software license. See [TRADEMARKS.md](TRADEMARKS.md).

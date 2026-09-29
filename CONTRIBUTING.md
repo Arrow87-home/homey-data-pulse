@@ -20,3 +20,5 @@ Keep pull requests small and focused, and explain the problem they solve. Discus
 Add or update tests when behaviour changes. Tests, lint and build must pass; `npm run check` also runs formatting and Homey debug validation. See the [development instructions](README.md#development) to get started.
 
 Suggestions do not guarantee a roadmap commitment, review date or merge. A focused explanation and a reproducible example make contributions easier to assess.
+
+By submitting a contribution, you agree that it may be distributed under the project's GPL-3.0-only license.

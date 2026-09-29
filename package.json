@@ -2,6 +2,7 @@
   "name": "homey-data-watchdog",
   "version": "0.1.3",
   "private": true,
+  "license": "GPL-3.0-only",
   "description": "Data Pulse: opt-in monitoring of selected Homey sources for confirmed activity and fresh data",
   "main": "app.js",
   "engines": {
