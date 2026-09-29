@@ -274,17 +274,25 @@ test('supported-model copy is explicit without changing manifest identity, versi
       'Homey Pro mini',
       'Homey Pro (2026)',
       'Homey Self-Hosted Server',
-      'Homey Cloud',
       '12.9.0',
-      'platform v1',
     ])
       assert.ok(content.includes(model), `${file}: ${model}`);
   }
-  assert.match(read('README.txt'), /Homey Cloud are not supported/);
-  assert.match(read('README.nl.txt'), /Homey Cloud worden niet ondersteund/);
+  assert.match(read('README.txt'), /Requires a platform v2 Homey/);
+  assert.match(read('README.nl.txt'), /Vereist een platform-v2-Homey/);
+  assert.match(read('README.md'), /Homey Cloud worden niet ondersteund/);
+  assert.match(read('docs/user-guide.md'), /Homey Cloud are not supported/);
   assert.match(read('README.md'), /Athom bevestigd/);
   assert.equal(manifest.id, 'io.github.arrow87-home.datawatchdog');
   assert.equal(manifest.version, '0.1.2');
+  assert.equal(manifest.homeyCommunityTopicId, 159768);
+  assert.equal(
+    manifest.source,
+    'https://github.com/Arrow87-home/homey-data-pulse',
+  );
+  assert.deepEqual(manifest.tags, {
+    en: ['monitoring', 'reliability', 'data', 'devices', 'integrations'],
+  });
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
   assert.equal(pkg.version, manifest.version);

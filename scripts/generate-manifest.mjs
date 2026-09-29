@@ -107,8 +107,10 @@ const manifest = {
     en: 'Know when your Homey data stops arriving',
     nl: 'Weet wanneer je Homey-data niet meer binnenkomt',
   },
+  homeyCommunityTopicId: 159768,
+  source: 'https://github.com/Arrow87-home/homey-data-pulse',
   tags: {
-    en: ['monitoring', 'watchdog', 'reliability', 'devices', 'integrations'],
+    en: ['monitoring', 'reliability', 'data', 'devices', 'integrations'],
   },
   category: ['tools'],
   brandColor: '#245B68',

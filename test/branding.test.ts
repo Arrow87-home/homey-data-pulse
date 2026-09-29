@@ -179,7 +179,7 @@ test('store positioning is opt-in and the next release notes explain compatibili
   );
   assert.match(
     readFileSync('README.nl.txt', 'utf8'),
-    /niet automatisch alle apparaten/,
+    /niet automatisch ieder apparaat/,
   );
   for (const file of ['README.txt', 'README.nl.txt'])
     assert.doesNotMatch(readFileSync(file, 'utf8'), /https?:\/\/|^#/m);
