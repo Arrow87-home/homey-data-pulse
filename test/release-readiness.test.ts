@@ -284,7 +284,7 @@ test('supported-model copy is explicit without changing manifest identity, versi
   assert.match(read('docs/user-guide.md'), /Homey Cloud are not supported/);
   assert.match(read('README.md'), /Athom bevestigd/);
   assert.equal(manifest.id, 'io.github.arrow87-home.datawatchdog');
-  assert.equal(manifest.version, '0.1.2');
+  assert.equal(manifest.version, '0.1.3');
   assert.equal(manifest.homeyCommunityTopicId, 159768);
   assert.equal(
     manifest.source,

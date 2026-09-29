@@ -8,5 +8,9 @@
   "0.1.2": {
     "en": "Data Watchdog is now Data Pulse. Existing configurations, devices and Flows remain compatible without migration. Compact Settings simplify setup, with a complete English/Dutch interface, clearer Flow cards and safer time-field selection for Last data received.",
     "nl": "Data Watchdog heet voortaan Data Pulse. Bestaande configuraties, apparaten en Flows blijven zonder migratie compatibel. Compacte Settings vereenvoudigen het instellen, met een volledige Nederlandse/Engelse interface, duidelijkere Flow-kaarten en veiligere tijdveldselectie voor Laatste gegevens ontvangen."
+  },
+  "0.1.3": {
+    "en": "Store metadata and community/support links updated for the Data Pulse release. Monitoring behaviour and existing configurations remain unchanged.",
+    "nl": "Store-metadata en community-/supportlinks bijgewerkt voor de Data Pulse-release. Bewakingsgedrag en bestaande configuraties blijven ongewijzigd."
   }
 }
