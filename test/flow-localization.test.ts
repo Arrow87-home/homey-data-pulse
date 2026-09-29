@@ -94,7 +94,7 @@ test('incident trigger titles and Help use the same localized names', () => {
     assert.doesNotMatch(JSON.stringify(settings), /watchdog/i);
   }
   for (const [file, language] of [
-    ['README.md', 'nl'],
+    ['README.md', 'en'],
     ['docs/user-guide.md', 'en'],
   ]) {
     const text = readFileSync(file, 'utf8');

@@ -250,7 +250,7 @@ test('current guides describe shared setup, individual More-menu editing and tim
     );
     assert.match(content, /capability\.lastUpdated/);
   }
-  for (const file of ['README.md', 'docs/self-test.md'])
+  for (const file of ['docs/self-test.md'])
     for (const name of [
       'Apparaatactiviteit',
       'Laatste gegevens ontvangen',
@@ -280,9 +280,9 @@ test('supported-model copy is explicit without changing manifest identity, versi
   }
   assert.match(read('README.txt'), /Requires a platform v2 Homey/);
   assert.match(read('README.nl.txt'), /Vereist een platform-v2-Homey/);
-  assert.match(read('README.md'), /Homey Cloud worden niet ondersteund/);
+  assert.match(read('README.md'), /Homey Cloud are not supported/);
   assert.match(read('docs/user-guide.md'), /Homey Cloud are not supported/);
-  assert.match(read('README.md'), /Athom bevestigd/);
+  assert.match(read('README.md'), /confirmation with Athom/);
   assert.equal(manifest.id, 'io.github.arrow87-home.datawatchdog');
   assert.equal(manifest.version, '0.1.3');
   assert.equal(manifest.homeyCommunityTopicId, 159768);
