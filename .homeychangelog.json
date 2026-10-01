@@ -12,5 +12,9 @@
   "0.1.3": {
     "en": "Store metadata and community/support links updated for the Data Pulse release. Monitoring behaviour and existing configurations remain unchanged.",
     "nl": "Store-metadata en community-/supportlinks bijgewerkt voor de Data Pulse-release. Bewakingsgedrag en bestaande configuraties blijven ongewijzigd."
+  },
+  "0.1.4": {
+    "en": "Removed an unnecessary local platform generation restriction following Homey review guidance. Data Pulse now relies on the Homey App Store compatibility rules for supported local Homeys.",
+    "nl": "Een onnodige beperking op lokale Homey-generaties is verwijderd naar aanleiding van Homey-reviewfeedback. Data Pulse gebruikt nu de compatibiliteitsregels van de Homey App Store voor ondersteunde lokale Homeys."
   }
 }

@@ -291,7 +291,7 @@ test('local-only compatibility copy and manifest remain consistent without a har
   assert.equal(manifest.compatibility, '>=12.9.0');
   assert.ok(manifest.permissions.includes('homey:manager:api'));
   assert.equal(manifest.id, 'io.github.arrow87-home.datawatchdog');
-  assert.equal(manifest.version, '0.1.3');
+  assert.equal(manifest.version, '0.1.4');
   assert.equal(manifest.homeyCommunityTopicId, 159768);
   assert.equal(
     manifest.source,
