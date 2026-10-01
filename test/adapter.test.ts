@@ -70,24 +70,101 @@ test('official API client forwards same values with newer transaction times, sup
   assert.equal(device.listenerCount('capability'), 0);
 });
 
-test('official in-app factory selects local API v3 for the documented SHS/Pro platform tuple', async () => {
-  const api = await HomeyAPI.createAppAPI({
-    homey: {
-      platform: 'local',
-      platformVersion: 2,
-      version: '12.9.0',
-      api: {
-        getOwnerApiToken: async () => 'offline-test-value',
-        getLocalUrl: async () => 'http://127.0.0.1',
+for (const [platformVersion, clientName] of [
+  [1, 'HomeyAPIV2'],
+  [2, 'HomeyAPIV3Local'],
+] as const)
+  test(`official local factory and required adapter contracts work for platformVersion ${platformVersion}`, async () => {
+    const api = await HomeyAPI.createAppAPI({
+      homey: {
+        platform: 'local',
+        platformVersion,
+        version: '12.9.0',
+        api: {
+          getOwnerApiToken: async () => 'offline-test-value',
+          getLocalUrl: async () => 'http://127.0.0.1',
+        },
+        cloud: { getHomeyId: async () => 'offline-test-id' },
       },
-      cloud: { getHomeyId: async () => 'offline-test-id' },
-    },
+    });
+    try {
+      assert.equal(api.constructor.name, clientName);
+      for (const method of [
+        'connect',
+        'disconnect',
+        'isConnected',
+        'on',
+        'off',
+      ] as const)
+        assert.equal(typeof api.devices[method], 'function', method);
+      assert.equal(typeof api.isConnected, 'function');
+      assert.equal(typeof api.disconnect, 'function');
+      assert.equal(typeof api.apps.getApps, 'function');
+      assert.equal(typeof api.zones.getZones, 'function');
+      const timestamp = '2026-09-17T10:00:00.000Z';
+      // Only substitute transport: real manager operations and device transformations run.
+      const calls: string[] = [];
+      (
+        api as unknown as { call(options: { path: string }): Promise<unknown> }
+      ).call = async ({ path }) => {
+        // The older local API uses trailing slashes on collection routes.
+        const route = path.replace(/\/$/, '');
+        calls.push(route);
+        if (route === '/api/manager/devices/device')
+          return {
+            d: {
+              id: 'd',
+              name: 'Offline source',
+              zone: 'z',
+              ...(platformVersion === 1
+                ? { driverId: 'sensor', driverUri: 'homey:app:test.app' }
+                : { driverId: 'homey:app:test.app:sensor' }),
+              capabilities: ['last_report'],
+              capabilitiesObj: {
+                last_report: {
+                  value: timestamp,
+                  type: 'string',
+                  lastUpdated: timestamp,
+                },
+              },
+              lastSeenAt: timestamp,
+            },
+          };
+        if (route === '/api/manager/apps/app')
+          return { 'test.app': { id: 'test.app', name: 'Offline app' } };
+        if (route === '/api/manager/zones/zone')
+          return { z: { id: 'z', name: 'Offline zone' } };
+        throw new Error(`Unexpected transport request: ${path}`);
+      };
+      const devices = await api.devices.getDevices({
+        $cache: false,
+        $timeout: 10000,
+      });
+      const apps = await api.apps.getApps();
+      const zones = await api.zones.getZones();
+      const device = devices.d;
+      assert.equal(typeof device.connect, 'function');
+      assert.equal(typeof device.makeCapabilityInstance, 'function');
+      assert.equal(device.driverId, 'homey:app:test.app:sensor');
+      assert.deepEqual(identifySource(device), {
+        id: 'test.app',
+        resolved: true,
+      });
+      assert.equal(device.capabilitiesObj.last_report.value, timestamp);
+      assert.equal(device.lastSeenAt, timestamp);
+      const inventory = buildInventory(devices, apps, zones);
+      assert.equal(inventory[0].devices[0].sourceAppId, 'test.app');
+      assert.equal(inventory[0].devices[0].zone, 'Offline zone');
+      assert.equal(inventory[0].devices[0].hasLastSeen, true);
+      assert.deepEqual(calls, [
+        '/api/manager/devices/device',
+        '/api/manager/apps/app',
+        '/api/manager/zones/zone',
+      ]);
+    } finally {
+      await api.disconnect();
+    }
   });
-  assert.equal(api.constructor.name, 'HomeyAPIV3Local');
-  assert.equal(typeof api.devices.getDevices, 'function');
-  assert.equal(typeof api.apps.getApps, 'function');
-  await api.disconnect();
-});
 
 test('strategies use explicit value semantics, never lastUpdated of ordinary measurements', () => {
   const m = makeConfig().monitors[0];

@@ -30,7 +30,7 @@ De [officiële custom-capabilitydocumentatie](https://apps.developer.homey.app/t
 
 ## Handmatige SHS-acceptatie
 
-Voer deze stappen zelf uit op een ondersteunde Homey: Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026) of Homey Self-Hosted Server met Homey 12.9.0 of nieuwer. Oudere platform-v1-modellen en Homey Cloud worden niet ondersteund. De runtimeguard blijft actief; automatische uitsluiting door de Store is niet bevestigd.
+Voer deze stappen zelf uit op een lokale Homey met Homey 12.9.0 of nieuwer. Homey Cloud wordt niet ondersteund. De Homey App Store bepaalt de compatibele modellen op basis van het manifest; Data Pulse legt geen extra generatiebeperking op.
 
 De Settings-interface en Flow-weergave zijn door de gebruiker live op SHS gecontroleerd. Onderstaand protocol blijft de controle voor de exacte volgende Test-build, de gekozen bewakingsmethode en herstartgedrag. Deze documentatie-update installeert niets. Gebruik alleen de lokale testbron en laat productieapparaten, integraties en bestaande Flows intact. Een app-update/herstart begint wel een nieuwe observatieperiode voor monitors: kies daarvoor zelf een geschikt moment.
 

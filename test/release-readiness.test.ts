@@ -37,7 +37,7 @@ function fixture(language: string) {
   });
   const homey = {
     platform: 'local',
-    platformVersion: 2,
+    platformVersion: 2 as number | undefined,
     __(key: string): string {
       const [group, name] = key.split('.');
       assert.equal(typeof locale[group]?.[name], 'string', key);
@@ -163,22 +163,23 @@ for (const language of ['en', 'nl'] as const) {
     });
   });
 
-  test(`runtime platform guard still allows only local v2 (${language})`, async () => {
+  test(`runtime accepts local independently of platformVersion and rejects non-local (${language})`, async () => {
     const { app, homey, locale } = fixture(language);
-    for (const [platform, version] of [
-      ['local', 1],
-      ['cloud', 2],
-      ['local', 3],
-    ] as const) {
-      homey.platform = platform;
-      homey.platformVersion = version;
-      await assert.rejects(app.onInit(), {
-        message: locale.errors.unsupportedPlatform,
-      });
+    for (const platform of ['cloud', 'unknown', '']) {
+      for (const version of [1, 2, undefined]) {
+        homey.platform = platform;
+        homey.platformVersion = version;
+        await assert.rejects(app.onInit(), {
+          message: locale.errors.unsupportedPlatform,
+        });
+      }
     }
     homey.platform = 'local';
-    homey.platformVersion = 2;
-    await assert.rejects(app.onInit(), (error) => error === bootstrapReached);
+    // This tests Data Pulse's decision; actual API-client selection is tested separately.
+    for (const version of [1, 2, 3, undefined]) {
+      homey.platformVersion = version;
+      await assert.rejects(app.onInit(), (error) => error === bootstrapReached);
+    }
   });
 }
 
@@ -261,28 +262,34 @@ test('current guides describe shared setup, individual More-menu editing and tim
       assert.ok(read(file).includes(name), `${file}: ${name}`);
 });
 
-test('supported-model copy is explicit without changing manifest identity, version or distribution fields', () => {
+test('local-only compatibility copy and manifest remain consistent without a hardware-generation restriction', () => {
+  for (const file of ['README.md', 'README.txt', 'docs/user-guide.md']) {
+    assert.match(
+      read(file),
+      /Data Pulse requires a local Homey running Homey 12\.9\.0 or later/,
+    );
+    assert.match(read(file), /Homey Cloud is not supported/);
+  }
+  assert.match(
+    read('README.nl.txt'),
+    /Data Pulse vereist een lokale Homey met Homey 12\.9\.0 of nieuwer/,
+  );
+  assert.match(read('README.nl.txt'), /Homey Cloud wordt niet ondersteund/);
   for (const file of [
     'README.md',
     'README.txt',
     'README.nl.txt',
     'docs/user-guide.md',
+    'docs/self-test.md',
   ]) {
-    const content = read(file);
-    for (const model of [
-      'Homey Pro (Early 2023)',
-      'Homey Pro mini',
-      'Homey Pro (2026)',
-      'Homey Self-Hosted Server',
-      '12.9.0',
-    ])
-      assert.ok(content.includes(model), `${file}: ${model}`);
+    assert.doesNotMatch(
+      read(file),
+      /platformVersion|platform.v[12]|Homey Pro \(Early 2023\)|Homey Pro mini|Homey Pro \(2026\)/,
+    );
   }
-  assert.match(read('README.txt'), /Requires a platform v2 Homey/);
-  assert.match(read('README.nl.txt'), /Vereist een platform-v2-Homey/);
-  assert.match(read('README.md'), /Homey Cloud are not supported/);
-  assert.match(read('docs/user-guide.md'), /Homey Cloud are not supported/);
-  assert.match(read('README.md'), /confirmation with Athom/);
+  assert.deepEqual(manifest.platforms, ['local']);
+  assert.equal(manifest.compatibility, '>=12.9.0');
+  assert.ok(manifest.permissions.includes('homey:manager:api'));
   assert.equal(manifest.id, 'io.github.arrow87-home.datawatchdog');
   assert.equal(manifest.version, '0.1.3');
   assert.equal(manifest.homeyCommunityTopicId, 159768);
@@ -303,5 +310,5 @@ test('supported-model copy is explicit without changing manifest identity, versi
   assert.deepEqual(lock.packages[''].dependencies, pkg.dependencies);
   assert.deepEqual(lock.packages[''].devDependencies, pkg.devDependencies);
   assert.equal(manifest.platformVersion, undefined);
-  assert.match(read('app.ts'), /this\.homey\.platformVersion !== 2/);
+  assert.doesNotMatch(read('app.ts'), /platformVersion/);
 });

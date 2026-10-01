@@ -1,37 +1,42 @@
-# Compatibility and acceptance gate
+# Local Homey compatibility and acceptance
 
-Evidence levels: **documented** = official interface/product table; **client verified** = inspected official package code and offline contract test; **pending live** = not exercised on either physical Homey. No live configuration changed.
+Data Pulse requires a local Homey running Homey 12.9.0 or later. Homey Cloud is not supported.
 
-| Feature                     | Homey Pro 2023/mini/2026               | Homey SHS                                         | Chosen implementation                                   |
-| --------------------------- | -------------------------------------- | ------------------------------------------------- | ------------------------------------------------------- |
-| SDK 3/local platform        | Documented local/v2                    | Explicitly documented local/v2                    | One app, platform local                                 |
-| Node.js/TypeScript          | Node 22 at Homey >=12.9                | Same SDK baseline; installed version pending live | TS to CommonJS, no native binaries                      |
-| API permission              | Documented                             | Same local platform path; acceptance pending      | Only homey:manager:api                                  |
-| API bootstrap               | Client verified local/v2 branch        | Same documented platform branch                   | createAppAPI, local URL/token                           |
-| ManagerDevices              | Local API schema/client verified       | Same local client; pending live                   | getDevices and selected subscriptions                   |
-| ManagerApps/ManagerZones    | Local API schema/client verified       | Same local client; pending live                   | Metadata inventory; name fallback on optional failure   |
-| Realtime subscriptions      | Client supports capability + CRUD      | Same client; emission semantics pending live      | Timestamp values only; periodic snapshot reconciliation |
-| Same-value capability event | Client accepts newer transaction times | Same client behavior                              | No universal delivery inference                         |
-| lastSeenAt                  | SDK >=12.6.1, source-maintained        | Same SDK; source support pending                  | Explicit activity contract only                         |
-| Settings/persistence        | SDK documented                         | Shared SDK; volume/restart test pending           | Versioned config + runtime settings                     |
-| Flow cards                  | SDK documented                         | Product supports Flow/Advanced Flow               | Own SDK cards, primitive tokens                         |
-| Timers/lifecycle            | SDK documented                         | Shared SDK; process lifecycle pending             | One Homey scheduler, cleanup, checkpoints               |
-| Radios                      | Not needed                             | Not needed                                        | No Bridge dependency                                    |
-| Host power loss             | App cannot observe itself              | App cannot observe itself                         | Future external heartbeat sink                          |
+The manifest retains `platforms: ["local"]`, `compatibility: ">=12.9.0"`, SDK 3 and `homey:manager:api`. Athom clarified during app review that Store compatibility follows the local/cloud platform selection and Homey version requirement. Data Pulse therefore checks only `homey.platform === 'local'`; it does not impose an additional hardware-generation restriction or maintain its own supported-model list.
 
-Pro 2016–2019 local/v1 is not the acceptance target of this first implementation; adapter refuses unsupported platform generations clearly. This does not restrict the user's Pro 2023. Homey Cloud is excluded because the needed permission is prohibited there.
+## API compatibility findings
 
-## Authorized next experiment (not run)
+The pinned `homey-api@3.20.0` package was inspected. No hard dependency on the second local platform generation was found in Data Pulse's adapter, inventory, service, API routes or test-source code.
 
-Use an isolated test app/device on SHS first, then Pro. Installation and source writes require explicit permission.
+| Boundary                | Evidence and unchanged behaviour                                                                                                                                                                                                                                                               |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HomeyAPI.createAppAPI` | Selects `HomeyAPIV2` for local `platformVersion: 1` and `HomeyAPIV3Local` for local `platformVersion: 2`. Both obtain the local URL and owner API token through the SDK. The version numbers select client implementations, not Data Pulse's acceptance policy.                                |
+| Devices and realtime    | Both clients provide `devices.getDevices`, manager `connect`/`disconnect`/`isConnected`, CRUD events, `device.connect` and `makeCapabilityInstance`. The older client inherits the shared manager/device implementation.                                                                       |
+| Device values           | `capabilitiesObj` is preserved; timestamp monitoring reads the selected capability's value. No measurement or `capability.lastUpdated` is promoted to delivery evidence.                                                                                                                       |
+| Device identity         | The older client normalizes `driverUri` plus a short driver ID into a qualified driver ID. `identifySource()` also retains owner URI, modern qualified IDs, legacy own-data `driverUri`, short/local IDs and conflict handling.                                                                |
+| `lastSeenAt`            | Read only when supplied by the source. Its availability and progression require source-specific live validation; no synthetic fallback is introduced. The optional test source already tolerates a missing/failing native `setLastSeenAt()` while keeping timestamp/manual evidence available. |
+| Apps and zones          | `apps.getApps` and `zones.getZones` exist in both clients. Optional metadata failures keep the existing name/zone fallbacks.                                                                                                                                                                   |
+| Flow and Settings       | The app uses SDK Flow cards and Settings get/set, with unchanged card IDs, tokens, config schema and persistence keys. Neither boundary uses a hardware-generation check.                                                                                                                      |
+| Runtime and lifecycle   | Existing scheduler, observation grace, checkpointing and cleanup remain unchanged. No radio, Bridge or native binary dependency is added.                                                                                                                                                      |
 
-1. Record firmware, SDK platform/version and source app versions.
-2. Verify inventory, owner URI/driver identity, settings and all Flow tokens.
-3. Source reports identical 21.3 values every interval; log source receipt, SDK call and third-party event separately. Check lastUpdated, lastChanged and lastSeenAt independently.
-4. Contrast successful report, cached replay, command write, no source response and app stopped. Do not infer attribution from a generic capability update.
-5. Use an explicit heartbeat timestamp/lastSeenAt implementation with a known source contract; stop one source, then several devices; inspect suppression and recovery.
-6. Restart watchdog during an open incident; interrupt its observation socket; verify no duplicate starts or invented recovery.
-7. Rename/remove/re-add a device; confirm selections and missing status.
-8. Validate SHS persistent volume survival after container restart. Check app-level persistence separately from host backup strategy.
+The upstream factory still rejects missing or unknown platform-version values because it cannot select a client. Removing Data Pulse's extra guard does not bypass or modify that upstream validation. Tests distinguish reaching the factory from successfully constructing a supported local client.
 
-The generic same-value question is resolved as a **documented limitation with working explicit strategies**, not as a universal guarantee awaiting optimistic deployment.
+Official references: [API factory](https://athombv.github.io/node-homey-api/HomeyAPI.html), [older local client](https://athombv.github.io/node-homey-api/HomeyAPIV2.html), [manifest](https://apps.developer.homey.app/the-basics/app/manifest).
+
+## Verification scope
+
+Offline tests cover startup acceptance/rejection, both real local API factory branches and their required method/data contracts, existing device-identity fallbacks, config/runtime compatibility and Flow contracts. SDK/server boundaries are mocked; this is not a claim of end-to-end operation on every Homey model. The user has previously checked the Settings interface and Flow display on SHS.
+
+## Manual acceptance on local hardware
+
+No deployment or live Homey access is part of this correction. When separately authorized, test an isolated source on the intended Homey, including older hardware offered the app by the Store:
+
+1. Record firmware, source-app versions and the API-client variant selected at startup.
+2. Verify inventory, owner/driver identity, optional app/zone metadata, Settings persistence and Flow tokens.
+3. Verify selected timestamp values, realtime subscriptions and snapshot reconciliation. A constant ordinary measurement is not evidence of failure.
+4. For Device activity, confirm that the source supplies a meaningful `lastSeenAt` that advances on activity and freezes when that activity stops. If unavailable, choose another supported evidence method.
+5. Use the [local self-test protocol](self-test.md) to check stale detection, grouped incidents where applicable and stable recovery without altering production integrations.
+6. Restart during an incident and interrupt/reconnect observation. Check persistence, fresh-evidence grace, cleanup and absence of duplicate incident starts.
+7. Check device rename/removal/re-addition and missing-source behaviour. On SHS, separately verify persistent-volume survival.
+
+Actual event delivery, reconnect behaviour, optional native last-seen support and resource use on older hardware remain live acceptance points. The app cannot report a complete outage of its own host while stopped.

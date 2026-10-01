@@ -1,3 +1,3 @@
 Data Pulse monitors selected Homey data sources and alerts you through Homey Flows when expected activity or fresh data stops arriving. Choose what counts as proof for each source: recent device activity, a source-provided time showing when data was last received, or confirmation from a Flow. Related failures can be grouped into one integration incident, with recovery confirmed only after updates remain stable.
 
-Data Pulse is opt-in and does not automatically monitor every device, battery level or availability state. Requires a platform v2 Homey: Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026), or Homey Self-Hosted Server, running Homey 12.9.0 or later.
+Data Pulse is opt-in and does not automatically monitor every device, battery level or availability state. Data Pulse requires a local Homey running Homey 12.9.0 or later. Homey Cloud is not supported.

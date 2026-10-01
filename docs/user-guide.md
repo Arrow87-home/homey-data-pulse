@@ -2,7 +2,7 @@
 
 Data Pulse helps you notice when a Homey device or integration stops reporting. This guide explains how to choose a useful signal, set up a monitor and receive notifications. You only need to know how to open an app's settings and create a Homey Flow.
 
-Requires Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026), or Homey Self-Hosted Server, running Homey 12.9.0 or later. Older Homey models (local platform v1) and Homey Cloud are not supported.
+Data Pulse requires a local Homey running Homey 12.9.0 or later. Homey Cloud is not supported.
 
 Open **Data Pulse → Settings** to configure monitoring. The same basic guidance is available there under **Help**, without opening a website.
 

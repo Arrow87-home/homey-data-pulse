@@ -258,6 +258,6 @@
     "confirmationTargetChanged": "The selected source has changed. Check the monitor before confirming an update.",
     "checkpointFailed": "Monitoring state could not be saved. Check the app diagnostics.",
     "starting": "Data Pulse is starting. Try again shortly.",
-    "unsupportedPlatform": "Data Pulse requires Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026), or Homey Self-Hosted Server. Older Homey models and Homey Cloud are not supported."
+    "unsupportedPlatform": "Data Pulse requires a local Homey."
   }
 }

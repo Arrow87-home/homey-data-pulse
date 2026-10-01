@@ -12,7 +12,7 @@ class DataWatchdogApp extends Homey.App {
   service?: WatchdogService;
   private timer?: NodeJS.Timeout;
   async onInit(): Promise<void> {
-    if (this.homey.platform !== 'local' || this.homey.platformVersion !== 2)
+    if (this.homey.platform !== 'local')
       throw new Error(this.homey.__('errors.unsupportedPlatform'));
     const api = await HomeyAPI.createAppAPI({ homey: this.homey });
     this.service = new WatchdogService(

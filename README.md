@@ -32,14 +32,9 @@ Use **Data Pulse incident started** and **Data Pulse incident recovered** in you
 
 ## Supported Homeys
 
-Data Pulse requires local platform v2 (`platformVersion: 2`) and **Homey 12.9.0 or later**:
+Data Pulse requires a local Homey running Homey 12.9.0 or later. Homey Cloud is not supported.
 
-- Homey Pro (Early 2023)
-- Homey Pro mini
-- Homey Pro (2026)
-- Homey Self-Hosted Server
-
-Older local Homey models with platformVersion 1 and Homey Cloud are not supported. The runtime checks this requirement; Store distribution restrictions still need confirmation with Athom.
+The Homey App Store determines compatible models from the app's local platform and minimum Homey version.
 
 ## Installation / Test version
 

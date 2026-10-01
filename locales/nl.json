@@ -258,6 +258,6 @@
     "confirmationTargetChanged": "De geselecteerde bron is gewijzigd. Controleer de monitor voordat je een update bevestigt.",
     "checkpointFailed": "De bewakingsstatus kon niet worden opgeslagen. Controleer de diagnostiek van de app.",
     "starting": "Data Pulse start op. Probeer het zo opnieuw.",
-    "unsupportedPlatform": "Data Pulse vereist Homey Pro (Early 2023), Homey Pro mini, Homey Pro (2026) of Homey Self-Hosted Server. Oudere Homey-modellen en Homey Cloud worden niet ondersteund."
+    "unsupportedPlatform": "Data Pulse vereist een lokale Homey."
   }
 }

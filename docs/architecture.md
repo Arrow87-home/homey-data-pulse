@@ -35,7 +35,7 @@ Inventory reads `devices.getDevices()`, `apps.getApps()` and `zones.getZones()`.
 
 ### 4. SHS feasibility
 
-The official SDK's Homey platform table explicitly identifies SHS and Pro 2023/mini/2026 as `local`, platformVersion `2`. `HomeyAPI.createAppAPI` selects `HomeyAPIV3Local` for exactly that combination and obtains its URL and token from SDK managers. This is a direct basis for sharing the adapter. See [the compatibility matrix](shs-compatibility.md). Installed firmware, app permissions, event behavior and lifecycle still require an authorized SHS acceptance test. Documentary support is not a live test result.
+Data Pulse requires a local Homey running Homey 12.9.0 or later; Homey Cloud is not supported. The manifest declares `platforms: ["local"]` and `compatibility: ">=12.9.0"`. Per Athom's review clarification, these determine Store compatibility; the app adds no hardware-generation restriction. The official `HomeyAPI.createAppAPI` factory selects the appropriate local client and obtains its URL and token from SDK managers. Both local client branches expose the adapter's required methods. See [the compatibility checks](shs-compatibility.md) for verified contracts and remaining live acceptance points.
 
 ### 5–7. Strategy choice, limitations and false positives
 
