@@ -9,7 +9,6 @@ const ms = z
 export const strategySchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('manual') }).strict(),
   z.object({ kind: z.literal('device-last-seen') }).strict(),
-  z.object({ kind: z.literal('device-availability') }).strict(),
   z
     .object({
       kind: z.literal('timestamp-capability'),
