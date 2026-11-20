@@ -93,7 +93,11 @@ export class HomeyApiAdapter {
         m.strategy.capabilities.every(
           (id) => device?.capabilitiesObj?.[id] !== undefined,
         );
-      engine.setPresent(m.id, !!sourceMatches && capsExist);
+      // Only an explicit boolean is usable as availability evidence.
+      const availabilityKnown =
+        m.strategy.kind !== 'device-availability' ||
+        typeof device?.available === 'boolean';
+      engine.setPresent(m.id, !!sourceMatches && capsExist && availabilityKnown);
       if (!m.enabled || !device || !sourceMatches || !capsExist) continue;
       const inventoryDevice = inventoryDevices.get(m.deviceId);
       if (inventoryDevice) {
@@ -147,6 +151,12 @@ export class HomeyApiAdapter {
     for (const m of engine.config.monitors) {
       const device = devices[m.deviceId];
       if (!device) continue;
+      if (m.strategy.kind === 'device-availability') {
+        // An explicit true is a fresh control-availability observation.
+        // False never refreshes this signal; unknown is marked not present above.
+        if (device.available === true) engine.recordDelivery(m.id, engine.clock.now());
+        continue;
+      }
       for (const detector of detectors) {
         const time = detector.read(
           m,
