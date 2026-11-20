@@ -238,9 +238,6 @@ export class WatchdogEngine {
       const stale = selected.filter((m) =>
         ['SUSPECTED_STALE', 'DEVICE_STALE'].includes(this.status(m.id)),
       );
-      const availabilitySelected = selected.filter(
-        (m) => m.strategy.kind === 'device-availability',
-      );
       let integration = this.integrationIncidents.get(source);
       if (!integration) {
         // Sliding window, not earliest-ever failure: pre-existing defects must not block a later cohort.
@@ -250,22 +247,17 @@ export class WatchdogEngine {
         );
         const cohort = sorted.find((m, index) => {
           const start = this.runtime(m.id).staleSince!;
-          const cohortMembers = sorted.slice(index).filter(
-            (x) => this.runtime(x.id).staleSince! - start <= p.correlationWindowMs,
+          const count = sorted
+            .slice(index)
+            .filter(
+              (x) =>
+                this.runtime(x.id).staleSince! - start <= p.correlationWindowMs,
+            ).length;
+          return (
+            count >= p.minStaleDevices &&
+            count / selected.length >= p.staleFraction &&
+            now - start >= p.correlationWindowMs
           );
-          const availabilityCount = cohortMembers.filter(
-            (x) => x.strategy.kind === 'device-availability',
-          ).length;
-          const mixedIncident =
-            cohortMembers.length >= p.minStaleDevices &&
-            cohortMembers.length / selected.length >= p.staleFraction;
-          // Control outages can correlate independently from healthy sensor readings.
-          const controlIncident =
-            availabilitySelected.length >= p.minStaleDevices &&
-            availabilityCount >= p.minStaleDevices &&
-            availabilityCount / availabilitySelected.length >= p.staleFraction;
-          return (mixedIncident || controlIncident) &&
-            now - start >= p.correlationWindowMs;
         });
         if (cohort) {
           integration = {
@@ -407,9 +399,7 @@ export class WatchdogEngine {
       evidenceKind:
         m.strategy.kind === 'device-last-seen'
           ? 'device-activity'
-          : m.strategy.kind === 'device-availability'
-            ? 'device-availability'
-            : 'data-delivery',
+          : 'data-delivery',
     };
   }
   private integrationEvent(
