@@ -3,8 +3,7 @@
     "methods": {
       "device-last-seen": "Device activity",
       "timestamp-capability": "Last data received",
-      "manual": "Flow confirmation",
-      "device-availability": "Availability"
+      "manual": "Flow confirmation"
     },
     "checkVia": "Check via",
     "devices": "Devices",
@@ -244,11 +243,8 @@
     "filters": {
       "device-last-seen": "Activity",
       "timestamp-capability": "Data",
-      "manual": "Flow",
-      "device-availability": "Availability"
-    },
-    "availabilityHelp": "Checks whether Homey reports the control device as available, even while sensors continue reporting. A closed or switched-off control is not a fault.",
-    "lastAvailability": "Last available: __time__"
+      "manual": "Flow"
+    }
   },
   "testSourceName": "Data Pulse Test Source (simulation)",
   "errors": {
