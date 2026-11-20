@@ -3,7 +3,8 @@
     "methods": {
       "device-last-seen": "Apparaatactiviteit",
       "timestamp-capability": "Laatste gegevens ontvangen",
-      "manual": "Bevestiging via Flow"
+      "manual": "Bevestiging via Flow",
+      "device-availability": "Beschikbaarheid"
     },
     "checkVia": "Controleer via",
     "devices": "Apparaten",
@@ -243,8 +244,11 @@
     "filters": {
       "device-last-seen": "Activiteit",
       "timestamp-capability": "Gegevens",
-      "manual": "Flow"
-    }
+      "manual": "Flow",
+      "device-availability": "Beschikbaarheid"
+    },
+    "availabilityHelp": "Controleert of Homey dit apparaat als beschikbaar meldt, ook wanneer de sensoren blijven werken. Een gesloten of uitgeschakelde klep is geen storing.",
+    "lastAvailability": "Laatst beschikbaar: __time__"
   },
   "testSourceName": "Data Pulse Testbron (simulatie)",
   "errors": {
