@@ -14,7 +14,7 @@ let errors = {};
 let sharedErrors = {};
 let monitorControls = new Map();
 let latestStatus = { monitors: [], integrations: [] };
-const kinds = ['device-last-seen', 'timestamp-capability', 'manual'];
+const kinds = ['device-last-seen', 'device-availability', 'timestamp-capability', 'manual'];
 const fields = [
   'source',
   'device',
@@ -152,6 +152,7 @@ function timestampVisibility() {
   el('timestamp-fields').hidden = kind() !== 'timestamp-capability';
   const helpKey = {
     'device-last-seen': 'activityHelp',
+    'device-availability': 'availabilityHelp',
     'timestamp-capability': 'timestampHelp',
     manual: 'manualHelp',
   }[kind()];
@@ -1053,7 +1054,9 @@ function renderMonitors() {
             t(
               monitor.strategy.kind === 'device-last-seen'
                 ? 'lastActivity'
-                : 'lastUpdate',
+                : monitor.strategy.kind === 'device-availability'
+                  ? 'lastAvailability'
+                  : 'lastUpdate',
               {
                 time:
                   runtime?.lastDeliveryAt == null
@@ -1080,7 +1083,9 @@ function renderMonitors() {
             t('evidenceKind'),
             monitor.strategy.kind === 'device-last-seen'
               ? 'device-activity'
-              : 'data-delivery',
+              : monitor.strategy.kind === 'device-availability'
+                ? 'device-availability'
+                : 'data-delivery',
           ],
           [
             t('timestampFields'),
